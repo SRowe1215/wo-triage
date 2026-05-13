@@ -1305,7 +1305,7 @@ function photosRequired() {
 function needsSMS() {
   if (ctx.applDisposalSuggestAction === 'send text') return true;
   if (ctx.entryPermission === 'unknown') return true;
-  if (ctx.photos === 'no - will request' && photosRequired()) return true;
+  if (ctx.photos === 'no - will request') return true;
   return false;
 }
 
@@ -1411,7 +1411,7 @@ function buildWODescription() {
   const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
   const woNum = document.getElementById('wo-number').value.trim();
   const lines = [];
-  lines.push(`WORK ORDER${woNum ? ' #' + woNum : ''} — ${today}`);
+  lines.push(`WORK ORDER${woNum ? ' #' + woNum : ''}`);
   lines.push('');
   lines.push(`ISSUE: ${buildIssueSummary()}`);
   const details = buildIssueDetails();
@@ -1433,7 +1433,7 @@ function buildAptlyComment() {
   const srcLabel = { aptly:'Aptly AI Agent', phone:'Phone Call', rm:'Rent Manager / TWA' }[source];
   const status = getDispatchStatus();
   const lines = [];
-  lines.push(`✅ Triage completed via WO Triage Tool — ${today}`);
+  lines.push(`✅ Triage completed via WO Triage Tool`);
   lines.push(`Source: ${srcLabel}`);
   lines.push('');
   const aptlyChecked = ctx.aptlyChecked === 'clear' || ctx.aptlyRechecked === 'clear'
@@ -1558,7 +1558,7 @@ function resetTriage() {
   document.getElementById('chat').innerHTML = '';
   document.getElementById('input-wrap').classList.remove('disabled');
   document.getElementById('input-hint').textContent = 'Type your answer or click a button above';
-  document.getElementById('text-input').value = '';
+  document.getElementById('msg-input').value = '';
   addAIBubble("Ready for a new work order. Select a source above and press <strong>Start Triage</strong> — or use a Quick Start button.");
 }
 
