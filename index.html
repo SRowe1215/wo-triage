@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turman Co — Work Order Triage</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --border: #e8e5de;
+  --border-strong: #ccc9c0;
+  --text: #1a1917;
+  --text-muted: #706e68;
+  --text-faint: #a8a49c;
+  --accent: #1a5c3a;
+  --accent-light: #e8f2ec;
+  --accent-mid: #2d7a52;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --warn-border: #d97706;
+  --stop: #991b1b;
+  --stop-bg: #fee2e2;
+  --stop-border: #dc2626;
+  --go: #14532d;
+  --go-bg: #dcfce7;
+  --go-border: #16a34a;
+  --info-bg: #eff6ff;
+  --info-border: #3b82f6;
+  --info: #1e40af;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Header ── */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 20px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 10; gap: 10px;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 500; flex-shrink: 0;
+}
+.logo-text { font-size: 14px; font-weight: 600; letter-spacing: -.2px; }
+.logo-sub  { font-size: 11px; color: var(--text-muted); }
+.header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wo-field {
+  display: flex; align-items: center; gap: 6px; background: var(--bg);
+  border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 5px 10px;
+}
+.wo-label { font-size: 11px; color: var(--text-muted); font-family: var(--mono); white-space: nowrap; }
+.wo-input {
+  font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text);
+  border: none; background: transparent; outline: none; width: 80px;
+}
+.wo-input::placeholder { color: var(--text-faint); }
+.btn-new {
+  padding: 6px 14px; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius); font-family: var(--sans); font-size: 12px;
+  font-weight: 500; cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.btn-new:hover { background: var(--accent-mid); }
+
+/* ── Emergency Banner ── */
+.emergency-banner {
+  display: none; background: #fef2f2; border-bottom: 3px solid var(--stop-border);
+  padding: 12px 20px; font-size: 13px; font-weight: 500; color: var(--stop); line-height: 1.5;
+}
+.emergency-banner.show { display: block; }
+.emergency-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+
+/* ── Source Bar ── */
+.source-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 10px 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.source-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.source-btn {
+  padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border-strong);
+  background: var(--surface); font-family: var(--sans); font-size: 12px;
+  color: var(--text-muted); cursor: pointer; transition: all .15s;
+}
+.source-btn:hover { border-color: var(--accent); color: var(--accent); }
+.source-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+.source-btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; max-width: 820px; width: 100%; margin: 0 auto; padding: 20px 16px 140px; }
+
+/* ── Welcome ── */
+.welcome { text-align: center; padding: 32px 20px; }
+.welcome h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; letter-spacing: -.3px; }
+.welcome p { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 500px; margin: 0 auto 24px; }
+.btn-start {
+  padding: 12px 28px; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius-lg); font-family: var(--sans); font-size: 15px;
+  font-weight: 600; cursor: pointer; transition: background .15s; margin-bottom: 24px;
+}
+.btn-start:hover { background: var(--accent-mid); }
+.starter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 540px; margin: 20px auto 0; }
+.starter-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 12px 14px; cursor: pointer; text-align: left; transition: all .15s;
+}
+.starter-card:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.starter-icon { font-size: 18px; margin-bottom: 5px; }
+.starter-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.starter-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+/* ── Chat ── */
+.chat { display: flex; flex-direction: column; gap: 14px; }
+.msg { display: flex; gap: 10px; animation: msgIn .18s ease; }
+@keyframes msgIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+.msg.user { flex-direction: row-reverse; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; margin-top: 2px;
+}
+.avatar.ai { background: var(--accent); color: #fff; font-family: var(--mono); }
+.avatar.user-av { background: var(--border); color: var(--text-muted); }
+.msg-col { display: flex; flex-direction: column; gap: 6px; max-width: 88%; }
+.msg.user .msg-col { align-items: flex-end; }
+.bubble {
+  padding: 11px 14px; border-radius: var(--radius-lg);
+  font-size: 14px; line-height: 1.65; color: var(--text);
+}
+.msg.ai   .bubble { background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; }
+.msg.user .bubble { background: var(--accent); color: #fff; border-top-right-radius: 4px; }
+
+/* ── Inline note (info/warn/stop inside chat) ── */
+.inline-note {
+  border-radius: var(--radius); padding: 10px 12px; font-size: 13px; line-height: 1.55;
+  border-left: 3px solid; margin-top: 2px;
+}
+.inline-note.warn  { background: var(--warn-bg);  border-color: var(--warn-border);  color: var(--warn); }
+.inline-note.stop  { background: var(--stop-bg);  border-color: var(--stop-border);  color: var(--stop); }
+.inline-note.info  { background: var(--info-bg);  border-color: var(--info-border);  color: var(--info); }
+.inline-note.go    { background: var(--go-bg);    border-color: var(--go-border);    color: var(--go);   }
+.inline-note strong { font-weight: 700; }
+
+/* ── Choice Buttons ── */
+.choices { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px; }
+.choice-btn {
+  display: flex; align-items: center; gap: 6px; padding: 7px 13px;
+  background: var(--surface); border: 1.5px solid var(--accent);
+  border-radius: 99px; font-family: var(--sans); font-size: 13px;
+  color: var(--accent); cursor: pointer; transition: all .15s; text-align: left;
+}
+.choice-btn:hover { background: var(--accent); color: #fff; }
+.choice-btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+.choice-letter {
+  width: 18px; height: 18px; background: var(--accent-light); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.choice-btn:hover .choice-letter { background: rgba(255,255,255,.25); }
+
+/* ── Input Bar ── */
+.input-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg); border-top: 1px solid var(--border); padding: 12px 16px 18px;
+}
+.input-inner { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 7px; }
+.textarea-wrap {
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg); display: flex; align-items: flex-end;
+  gap: 8px; padding: 9px 11px; transition: all .15s;
+}
+.textarea-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.textarea-wrap.disabled { opacity: .5; pointer-events: none; }
+#msg-input {
+  flex: 1; border: none; background: transparent; font-family: var(--sans);
+  font-size: 14px; color: var(--text); resize: none; outline: none;
+  max-height: 120px; line-height: 1.5; min-height: 22px;
+}
+#msg-input::placeholder { color: var(--text-faint); }
+.btn-send {
+  width: 34px; height: 34px; border-radius: 8px; background: var(--accent);
+  border: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; transition: all .15s;
+}
+.btn-send:hover { background: var(--accent-mid); }
+.btn-send:disabled { opacity: .4; cursor: not-allowed; }
+.btn-send svg { width: 16px; height: 16px; fill: #fff; }
+.input-hint { font-size: 11px; color: var(--text-faint); text-align: center; }
+
+/* ── Output Card ── */
+.output-card {
+  background: var(--surface); border: 2px solid var(--accent);
+  border-radius: var(--radius-lg); overflow: hidden; animation: msgIn .25s ease;
+}
+.output-header {
+  background: var(--accent); padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.output-header-title { font-size: 14px; font-weight: 600; color: #fff; }
+.output-status {
+  padding: 3px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+}
+.status-ready  { background: var(--go-bg);   color: var(--go);   }
+.status-hold   { background: var(--warn-bg);  color: var(--warn); }
+.status-stop   { background: var(--stop-bg);  color: var(--stop); }
+.status-emerg  { background: #fecaca;         color: var(--stop); }
+.output-notes {
+  padding: 12px 16px; font-size: 13px; color: var(--text-muted);
+  line-height: 1.6; border-bottom: 1px solid var(--border); white-space: pre-wrap;
+}
+.output-section { border-bottom: 1px solid var(--border); padding: 14px 16px; }
+.output-section:last-child { border-bottom: none; }
+.output-section-hdr {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+}
+.output-section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); display: flex; align-items: center; gap: 5px;
+}
+.btn-copy {
+  padding: 4px 11px; background: var(--accent-light); border: 1px solid var(--accent);
+  border-radius: var(--radius); font-family: var(--sans); font-size: 11px;
+  font-weight: 500; color: var(--accent); cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn-copy:hover { background: var(--accent); color: #fff; }
+.btn-copy.copied { background: var(--go-bg); border-color: var(--go-border); color: var(--go); }
+.output-text {
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.75; color: var(--text);
+  white-space: pre-wrap; word-break: break-word; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px;
+}
+.output-action-note {
+  margin-top: 8px; padding: 8px 10px; background: var(--warn-bg);
+  border: 1px solid var(--warn-border); border-radius: var(--radius);
+  font-size: 12px; color: var(--warn); line-height: 1.5;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Emergency Banner -->
+<div class="emergency-banner" id="emergency-banner">
+  <div class="emergency-title" id="emergency-title">🚨 EMERGENCY</div>
+  <div id="emergency-body"></div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark">TC</div>
+    <div>
+      <div class="logo-text">Work Order Triage</div>
+      <div class="logo-sub">Turman Co</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="wo-field">
+      <span class="wo-label">WO #</span>
+      <input class="wo-input" id="wo-number" type="text" placeholder="e.g. 23419" />
+    </div>
+    <button class="btn-new" onclick="resetTriage()">+ New triage</button>
+  </div>
+</div>
+
+<!-- Source Selector -->
+<div class="source-bar">
+  <span class="source-label">Work order source:</span>
+  <button class="source-btn" id="src-aptly"  onclick="setSource(this,'aptly')">🤖 Aptly AI Agent</button>
+  <button class="source-btn active" id="src-phone" onclick="setSource(this,'phone')">📞 Phone Call</button>
+  <button class="source-btn" id="src-rm"    onclick="setSource(this,'rm')">📋 Rent Manager / TWA</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div id="welcome">
+    <div class="welcome">
+      <h2>Ready to triage a work order</h2>
+      <p>Select the source above, enter the WO# if you have it, then press Start. I'll walk you through everything one question at a time — click the lettered buttons to answer quickly, or type and press Enter for open-ended questions.</p>
+      <button class="btn-start" onclick="startTriage()">▶ Start Triage</button>
+      <p style="font-size:12px;color:var(--text-faint);margin-top:-12px">— or jump to a common scenario —</p>
+      <div class="starter-grid">
+        <div class="starter-card" onclick="quickStart('aptly','Tenant reported AC not cooling — Aptly AI agent submitted the work order.')">
+          <div class="starter-icon">🌡️</div>
+          <div class="starter-title">HVAC (via AI Agent)</div>
+          <div class="starter-desc">AC or heat issue from Aptly</div>
+        </div>
+        <div class="starter-card" onclick="quickStart('phone','Tenant called — leak under the kitchen sink, Unit 204.')">
+          <div class="starter-icon">💧</div>
+          <div class="starter-title">Leak (phone call)</div>
+          <div class="starter-desc">Sink, ceiling, or water issue</div>
+        </div>
+        <div class="starter-card" onclick="quickStart('rm','Tenant submitted ticket: disposal not working.')">
+          <div class="starter-icon">🔧</div>
+          <div class="starter-title">Appliance (TWA ticket)</div>
+          <div class="starter-desc">Disposal, fridge, stove, etc.</div>
+        </div>
+        <div class="starter-card" onclick="quickStart('phone','Tenant called — outlets in the bathroom not working, Unit 312.')">
+          <div class="starter-icon">⚡</div>
+          <div class="starter-title">Electrical (phone call)</div>
+          <div class="starter-desc">Outlets, breaker, fixtures</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="chat" id="chat"></div>
+</div>
+
+<!-- Input Bar -->
+<div class="input-bar">
+  <div class="input-inner">
+    <div class="textarea-wrap" id="input-wrap">
+      <textarea id="msg-input" rows="1"
+        placeholder="Type your answer and press Enter…"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="btn-send" id="send-btn" onclick="submitText()">
+        <svg viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>
+      </button>
+    </div>
+    <div class="input-hint" id="input-hint">Click a lettered button above to answer, or type here for open-ended questions</div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+let source = 'phone';
+let ctx    = {};   // all collected answers
+let notes  = [];   // inline advisory notes shown to Stephanie
+let currentQ = null;
+let triageActive = false;
+let emergencyMsg = null;
+let warrantyFlag = false;
+
+// ════════════════════════════════════════════════════════════════
+// QUESTION FLOW DEFINITION
+// ════════════════════════════════════════════════════════════════
+// Each question: { id, text, type:'choice'|'text', field, placeholder?,
+//                  choices:[{letter,text,value,next,flag?,note?,noteType?}],
+//                  next? (for text questions) }
+// Special next values: 'DONE' = generate outputs, null = terminal
+
+const FLOW = {
+
+  // ── STEP 1: Aptly check ────────────────────────────────────────
+  aptly_check: {
+    id: 'aptly_check',
+    text: "Before anything else — have you pulled up the Aptly card for this unit to check for open work orders or recent repairs?",
+    type: 'choice', field: 'aptlyChecked',
+    choices: [
+      { letter:'A', text:"Yes — checked, no other open WOs and no recent repairs on this issue",
+        value:'clear', next:'unit_number' },
+      { letter:'B', text:"Yes — found other open work orders or recent work on this issue",
+        value:'findings', next:'aptly_findings' },
+      { letter:'C', text:"Not yet — I need to go check",
+        value:'not_yet', next:'aptly_remind',
+        note:"Go check the Aptly card before continuing. Look for: open WOs on the same issue, any vendor visits in the last 90 days, and any recent installs or warranty items.", noteType:'warn' }
+    ]
+  },
+
+  aptly_remind: {
+    id: 'aptly_remind',
+    text: "Take a moment to check the Aptly card now. Look for:\n• Any other open work orders for this unit\n• Same issue repaired within the last 90 days (warranty!)\n• New appliance or system installed within the last year\n\nCome back when you've reviewed it:",
+    type: 'choice', field: 'aptlyRechecked',
+    choices: [
+      { letter:'A', text:"All clear — no open WOs, no recent repairs", value:'clear', next:'unit_number' },
+      { letter:'B', text:"Found something relevant",                    value:'findings', next:'aptly_findings' }
+    ]
+  },
+
+  aptly_findings: {
+    id: 'aptly_findings',
+    text: "What did you find in Aptly?",
+    type: 'choice', field: 'aptlyFindings',
+    choices: [
+      { letter:'A', text:"Same issue was repaired within the last 90 days",
+        value:'recent repair same issue', next:'warranty_decision',
+        flag:'warranty', note:"⚠️ WARRANTY FLAG — Same issue repaired within 90 days. Call the original vendor first before dispatching a new one.", noteType:'warn' },
+      { letter:'B', text:"New appliance or system installed within the last year",
+        value:'new install within 1 year', next:'warranty_decision',
+        flag:'warranty', note:"⚠️ WARRANTY FLAG — New install within 1 year may still be under manufacturer or contractor warranty. Contact original installer first.", noteType:'warn' },
+      { letter:'C', text:"There are other open work orders for different issues (unrelated)",
+        value:'other open WOs unrelated', next:'unit_number' },
+      { letter:'D', text:"Other notes or vendor history worth knowing — describe below",
+        value:'other', next:'aptly_note' }
+    ]
+  },
+
+  warranty_decision: {
+    id: 'warranty_decision',
+    text: "This issue may be under warranty. Before dispatching a new vendor, the original vendor should be contacted first.\n\nHow would you like to proceed?",
+    type: 'choice', field: 'warrantyDecision',
+    choices: [
+      { letter:'A', text:"I'll note the warranty flag and continue gathering info",
+        value:'continue', next:'unit_number' },
+      { letter:'B', text:"I'm stopping here — I'll call the original vendor",
+        value:'stop', next:'warranty_stop' }
+    ]
+  },
+
+  warranty_stop: {
+    id: 'warranty_stop',
+    text: "✅ Correct call. Here's what to do:\n\n1. Find the original vendor in the Aptly card or prior work order\n2. Call them and reference the original work order date\n3. Describe the recurring issue and request a callback under warranty\n4. If they won't honor it, escalate to management\n\nNo new dispatch needed at this time.",
+    type: 'choice', field: 'warrantyStop',
+    choices: [
+      { letter:'A', text:"Got it — I'll handle it and close this out", value:'done', next:'DONE' }
+    ]
+  },
+
+  aptly_note: {
+    id: 'aptly_note',
+    text: "Briefly describe what you found (this will be included in the Aptly card comment):",
+    type: 'text', field: 'aptlyNote', placeholder:'e.g. Prior vendor noted slow drain in 2023, tenant has had this before…',
+    next: 'unit_number'
+  },
+
+  // ── STEP 2: Basic info ─────────────────────────────────────────
+  unit_number: {
+    id: 'unit_number', text: "What is the unit number?",
+    type: 'text', field: 'unitNumber', placeholder: 'e.g. 204  or  Building C, Unit 8',
+    next: 'property_name'
+  },
+  property_name: {
+    id: 'property_name', text: "Which property?",
+    type: 'text', field: 'propertyName', placeholder: 'e.g. Cedar Creek, Maple Ridge…',
+    next: 'rm_complaint'  // will route based on source in getNext()
+  },
+
+  // ── RM/TWA only: capture tenant's original complaint ───────────
+  rm_complaint: {
+    id: 'rm_complaint',
+    text: "Paste the tenant's original complaint from Rent Manager / TWA below. This gets saved to the Aptly comment so there's a record of their exact words:",
+    type: 'text', field: 'rmComplaint',
+    placeholder: 'Paste tenant\'s submitted text here…',
+    next: 'issue_category'
+  },
+
+  // ── STEP 3: Issue category ─────────────────────────────────────
+  issue_category: {
+    id: 'issue_category',
+    text: "What category best describes this issue?",
+    type: 'choice', field: 'issueCategory',
+    choices: [
+      { letter:'A', text:'Plumbing or water (leak, clog, no water, running toilet)', value:'plumbing',   next:'plumb_location' },
+      { letter:'B', text:'HVAC — heating or cooling',                                value:'hvac',      next:'hvac_type' },
+      { letter:'C', text:'Electrical (outlet, breaker, light fixture, ceiling fan)', value:'electrical', next:'elec_what' },
+      { letter:'D', text:'Appliance (fridge, stove, disposal, dishwasher, washer/dryer)', value:'appliance', next:'appl_which' },
+      { letter:'E', text:'Pest or rodent',                                           value:'pest',      next:'pest_type' },
+      { letter:'F', text:'Door, window, or lock',                                    value:'door',      next:'door_which' },
+      { letter:'G', text:'Flooring',                                                 value:'flooring',  next:'floor_type' },
+      { letter:'H', text:'Roof or ceiling (water stain, drip)',                      value:'roof',      next:'roof_active' },
+      { letter:'I', text:'Exterior or other',                                        value:'other',     next:'other_describe' }
+    ]
+    // NOTE: for 'aptly' source, getNext() overrides to 'aptly_summary' then 'entry_permission'
+  },
+
+  // ── APTLY: summarize AI-captured info ─────────────────────────
+  aptly_summary: {
+    id: 'aptly_summary',
+    text: "The Aptly AI agent already walked the tenant through the diagnostic questions. Briefly summarize what the agent captured about this issue:",
+    type: 'text', field: 'aptlySummary',
+    placeholder: 'e.g. Tenant says AC running but not cooling. Agent confirmed filter changed 3 weeks ago, thermostat batteries fine, set to 72°F, indoor temp is 84°F…',
+    next: 'entry_permission'
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // PLUMBING FLOW
+  // ════════════════════════════════════════════════════════════════
+  plumb_location: {
+    id: 'plumb_location', text: "Which fixture or location?",
+    type: 'choice', field: 'plumbLocation',
+    choices: [
+      { letter:'A', text:'Kitchen sink',              value:'kitchen sink',              next:'plumb_issue' },
+      { letter:'B', text:'Bathroom sink',             value:'bathroom sink',             next:'plumb_issue' },
+      { letter:'C', text:'Toilet',                    value:'toilet',                    next:'plumb_issue' },
+      { letter:'D', text:'Shower or tub',             value:'shower/tub',                next:'plumb_issue' },
+      { letter:'E', text:'Water heater',              value:'water heater',              next:'plumb_issue' },
+      { letter:'F', text:'Ceiling drip (unknown source)', value:'ceiling (unknown source)', next:'plumb_ceiling' },
+      { letter:'G', text:'Washing machine connection', value:'washing machine connection', next:'plumb_issue' },
+      { letter:'H', text:'Multiple / main line',      value:'multiple/main line',        next:'plumb_issue' }
+    ]
+  },
+
+  plumb_ceiling: {
+    id: 'plumb_ceiling',
+    text: "Ceiling drips can look like roof leaks but are often from a leaking fixture on the floor above. Was any roofing work done on this building in the last year?",
+    type: 'choice', field: 'plumbCeilingRoof',
+    choices: [
+      { letter:'A', text:'Yes — roof work within the last year',
+        value:'yes recent roof', next:'plumb_issue',
+        flag:'warranty', note:"⚠️ POTENTIAL WARRANTY — Roof work within the last year. The ceiling drip may be a roofing defect. Contact original roofer before dispatching.", noteType:'warn' },
+      { letter:'B', text:'No — no recent roofing work', value:'no recent roof', next:'plumb_issue' },
+      { letter:'C', text:'Unknown',                     value:'unknown',         next:'plumb_issue' }
+    ]
+  },
+
+  plumb_issue: {
+    id: 'plumb_issue', text: "What exactly is happening?",
+    type: 'choice', field: 'plumbIssue',
+    choices: [
+      { letter:'A', text:'Active leak — water dripping or pooling',     value:'active leak',       next:'plumb_severity' },
+      { letter:'B', text:'Dripping faucet (drips when off)',             value:'dripping faucet',   next:'plumb_duration' },
+      { letter:'C', text:'Running toilet (won\'t stop running)',         value:'running toilet',    next:'plumb_toilet_tip' },
+      { letter:'D', text:'Clogged or very slow drain',                   value:'clogged/slow drain', next:'plumb_drain_scope' },
+      { letter:'E', text:'No water at all',                              value:'no water',          next:'plumb_no_water' },
+      { letter:'F', text:'Low water pressure',                           value:'low water pressure', next:'plumb_duration' },
+      { letter:'G', text:'Water heater not producing hot water',         value:'no hot water',      next:'plumb_duration' },
+      { letter:'H', text:'Other',                                        value:'other',             next:'plumb_duration' }
+    ]
+  },
+
+  plumb_toilet_tip: {
+    id: 'plumb_toilet_tip',
+    text: "Running toilets are often caused by a worn flapper — a $5 part that a handyperson can fix quickly. Is the tenant asking us to repair it, or are they just reporting it?",
+    type: 'choice', field: 'plumbToiletReported',
+    choices: [
+      { letter:'A', text:'Requesting our repair — dispatch a plumber', value:'repair needed', next:'plumb_duration' },
+      { letter:'B', text:'Just reporting — I\'ll let them know it\'s a simple flapper fix',
+        value:'informational', next:'plumb_duration',
+        note:"Running toilet is typically a flapper issue. Consider informing tenant it's a straightforward fix before dispatching a plumber.", noteType:'info' }
+    ]
+  },
+
+  plumb_severity: {
+    id: 'plumb_severity', text: "How severe is the leak right now?",
+    type: 'choice', field: 'plumbSeverity',
+    choices: [
+      { letter:'A', text:'Slight drip when water is running',     value:'slight drip',    next:'plumb_damage' },
+      { letter:'B', text:'Constant slow drip even when not in use', value:'constant drip', next:'plumb_damage' },
+      { letter:'C', text:'Steady stream of water',                value:'steady stream',  next:'plumb_damage' },
+      { letter:'D', text:'Flooding — water actively spreading',   value:'flooding',       next:'plumb_damage',
+        flag:'emergency', emergency:'FLOODING — Active water spreading. Instruct tenant to shut off the nearest water supply valve. Contact management IMMEDIATELY. Same-day emergency response required.' }
+    ]
+  },
+
+  plumb_damage: {
+    id: 'plumb_damage', text: "Has water damage occurred to floors, walls, or cabinets?",
+    type: 'choice', field: 'plumbWaterDamage',
+    choices: [
+      { letter:'A', text:'Yes — visible damage',   value:'yes - visible damage', next:'plumb_duration' },
+      { letter:'B', text:'No visible damage',      value:'no',                   next:'plumb_duration' },
+      { letter:'C', text:'Unknown',                value:'unknown',              next:'plumb_duration' }
+    ]
+  },
+
+  plumb_drain_scope: {
+    id: 'plumb_drain_scope',
+    text: "Is it a single drain clogged, or are multiple drains affected?",
+    type: 'choice', field: 'plumbDrainScope',
+    choices: [
+      { letter:'A', text:'Single drain only (one sink, shower, or toilet)',
+        value:'single drain', next:'plumb_drain_single',
+        note:"Single clogged drains (hair, grease, food) are typically tenant responsibility. Evaluate before dispatching.", noteType:'info' },
+      { letter:'B', text:'Multiple drains or whole unit backing up',
+        value:'multiple/main line', next:'plumb_duration' }
+    ]
+  },
+
+  plumb_drain_single: {
+    id: 'plumb_drain_single',
+    text: "Single drain clogs are often tenant-caused (hair, grease, food). How do you want to handle this?",
+    type: 'choice', field: 'plumbDrainDecision',
+    choices: [
+      { letter:'A', text:'Dispatch a plumber — we\'ll handle it',   value:'dispatch', next:'plumb_duration' },
+      { letter:'B', text:'Inform tenant it\'s their responsibility', value:'tenant responsibility', next:'plumb_duration',
+        note:"Tenant notified: single drain clogs caused by hair/grease/food are tenant's responsibility per lease.", noteType:'info' }
+    ]
+  },
+
+  plumb_no_water: {
+    id: 'plumb_no_water',
+    text: "Is it the whole unit with no water, or just one fixture?",
+    type: 'choice', field: 'plumbNoWaterScope',
+    choices: [
+      { letter:'A', text:'Whole unit — no water anywhere',          value:'whole unit',     next:'plumb_utility' },
+      { letter:'B', text:'Just one fixture or area',                value:'single fixture', next:'plumb_duration' }
+    ]
+  },
+
+  plumb_utility: {
+    id: 'plumb_utility',
+    text: "Whole-unit water outages are sometimes caused by unpaid bills. Has the tenant confirmed their water account is current?",
+    type: 'choice', field: 'plumbUtility',
+    choices: [
+      { letter:'A', text:'Yes — bill is current, not a utility issue',             value:'current',          next:'plumb_duration' },
+      { letter:'B', text:'Tenant pays their own water — may be shut off for non-payment',
+        value:'possible shutoff', next:'plumb_duration',
+        note:"Possible utility shutoff for non-payment. Verify with tenant before dispatching.", noteType:'warn' },
+      { letter:'C', text:'Water is landlord-paid / unknown',                       value:'unknown',          next:'plumb_duration' }
+    ]
+  },
+
+  plumb_duration: {
+    id: 'plumb_duration', text: "How long has this plumbing issue been going on?",
+    type: 'choice', field: 'issueDuration',
+    choices: [
+      { letter:'A', text:'Just noticed today',   value:'just today',     next:'entry_permission' },
+      { letter:'B', text:'A few days (2–4)',     value:'a few days',     next:'entry_permission' },
+      { letter:'C', text:'About a week',         value:'about a week',   next:'entry_permission' },
+      { letter:'D', text:'More than a week',     value:'more than a week', next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // HVAC FLOW
+  // ════════════════════════════════════════════════════════════════
+  hvac_type: {
+    id: 'hvac_type', text: "What is the HVAC problem?",
+    type: 'choice', field: 'hvacType',
+    choices: [
+      { letter:'A', text:'No cooling — AC running but not cooling',      value:'no cooling',              next:'hvac_temp' },
+      { letter:'B', text:'No heating — heat running but not heating',    value:'no heating',              next:'hvac_temp' },
+      { letter:'C', text:'System not turning on at all',                 value:'not turning on',          next:'hvac_thermostat' },
+      { letter:'D', text:'System runs but doesn\'t reach set temp',      value:'not reaching set temp',   next:'hvac_temp' },
+      { letter:'E', text:'Making unusual noise',                         value:'unusual noise',           next:'hvac_noise' },
+      { letter:'F', text:'Leaking water from the unit',                  value:'leaking water',           next:'hvac_duration' }
+    ]
+  },
+
+  hvac_noise: {
+    id: 'hvac_noise', text: "What does the noise sound like?",
+    type: 'choice', field: 'hvacNoise',
+    choices: [
+      { letter:'A', text:'Banging or clanking',   value:'banging/clanking', next:'hvac_duration' },
+      { letter:'B', text:'Squealing or screeching', value:'squealing',      next:'hvac_duration' },
+      { letter:'C', text:'Rattling',              value:'rattling',          next:'hvac_duration' },
+      { letter:'D', text:'Clicking repeatedly',   value:'clicking',          next:'hvac_duration' },
+      { letter:'E', text:'Other',                 value:'other noise',       next:'hvac_duration' }
+    ]
+  },
+
+  hvac_temp: {
+    id: 'hvac_temp', text: "What is the temperature inside the unit right now?",
+    type: 'text', field: 'hvacIndoorTemp',
+    placeholder: "e.g. 88°F, unknown, tenant didn't say…",
+    next: 'hvac_thermostat'
+  },
+
+  hvac_thermostat: {
+    id: 'hvac_thermostat', text: "Have they checked the thermostat batteries?",
+    type: 'choice', field: 'hvacThermostat',
+    choices: [
+      { letter:'A', text:'Yes — batteries are fine',
+        value:'checked fine', next:'hvac_filter' },
+      { letter:'B', text:'Yes — replaced batteries and the system came back on',
+        value:'batteries fixed it', next:'hvac_resolved',
+        note:"✅ Thermostat battery replacement resolved the issue. No dispatch needed!", noteType:'go' },
+      { letter:'C', text:'No — haven\'t checked yet',
+        value:'not checked', next:'hvac_filter',
+        note:"Remind Stephanie to ask tenant to check/replace thermostat batteries first — this resolves a surprising number of calls.", noteType:'info' },
+      { letter:'D', text:'Smart thermostat (no batteries)',
+        value:'smart thermostat', next:'hvac_filter' }
+    ]
+  },
+
+  hvac_resolved: {
+    id: 'hvac_resolved',
+    text: "Great — no dispatch needed! Do you want to document this as a no-dispatch resolution for the Aptly card?",
+    type: 'choice', field: 'hvacResolvedAction',
+    choices: [
+      { letter:'A', text:'Yes — generate the Aptly comment and close it out', value:'document', next:'DONE' },
+      { letter:'B', text:'No — I\'ll just close it',                          value:'close',    next:'DONE' }
+    ]
+  },
+
+  hvac_filter: {
+    id: 'hvac_filter', text: "Has the air filter been changed recently?",
+    type: 'choice', field: 'hvacFilter',
+    choices: [
+      { letter:'A', text:'Yes — within the last 30 days', value:'recently changed', next:'hvac_smell' },
+      { letter:'B', text:'No — not recently',             value:'not recently',     next:'hvac_smell' },
+      { letter:'C', text:'Unknown',                       value:'unknown',           next:'hvac_smell' }
+    ]
+  },
+
+  hvac_smell: {
+    id: 'hvac_smell', text: "Any unusual smells from the unit or HVAC system?",
+    type: 'choice', field: 'hvacSmell',
+    choices: [
+      { letter:'A', text:'Gas smell',
+        value:'gas smell', next:'hvac_duration',
+        flag:'emergency', emergency:'GAS SMELL — Instruct tenant to leave the unit immediately without using light switches or appliances. Call 911 and the gas company. Alert management NOW. Do NOT dispatch through normal channels.' },
+      { letter:'B', text:'Burning smell',
+        value:'burning smell', next:'hvac_duration',
+        note:"Burning smell from HVAC may indicate a motor or electrical issue — flag for urgent dispatch.", noteType:'warn' },
+      { letter:'C', text:'Musty or mold smell',  value:'musty/mold smell', next:'hvac_duration' },
+      { letter:'D', text:'No unusual smell',      value:'none',              next:'hvac_duration' }
+    ]
+  },
+
+  hvac_duration: {
+    id: 'hvac_duration', text: "How long has the HVAC problem been going on?",
+    type: 'choice', field: 'issueDuration',
+    choices: [
+      { letter:'A', text:'Just noticed today',  value:'just today',      next:'entry_permission' },
+      { letter:'B', text:'A few days',          value:'a few days',      next:'entry_permission' },
+      { letter:'C', text:'About a week',        value:'about a week',    next:'entry_permission' },
+      { letter:'D', text:'More than a week',    value:'more than a week', next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // ELECTRICAL FLOW
+  // ════════════════════════════════════════════════════════════════
+  elec_what: {
+    id: 'elec_what', text: "What specifically is not working?",
+    type: 'choice', field: 'elecWhat',
+    choices: [
+      { letter:'A', text:'One outlet not working',          value:'single outlet',     next:'elec_gfci' },
+      { letter:'B', text:'Multiple outlets not working',    value:'multiple outlets',  next:'elec_breaker' },
+      { letter:'C', text:'Light fixture not working',       value:'light fixture',     next:'elec_bulb' },
+      { letter:'D', text:'Ceiling fan not working',         value:'ceiling fan',       next:'elec_breaker' },
+      { letter:'E', text:'Whole room has no power',         value:'whole room no power', next:'elec_breaker' },
+      { letter:'F', text:'Breaker keeps tripping',          value:'breaker keeps tripping', next:'elec_safety' },
+      { letter:'G', text:'Smoke detector (chirping or alarm)', value:'smoke detector', next:'elec_smoke' }
+    ]
+  },
+
+  elec_bulb: {
+    id: 'elec_bulb', text: "Have they tried replacing the bulb?",
+    type: 'choice', field: 'elecBulb',
+    choices: [
+      { letter:'A', text:'Yes — new bulb, still not working',           value:'tried new bulb',  next:'elec_breaker' },
+      { letter:'B', text:'No — haven\'t tried yet',                     value:'not tried',       next:'elec_breaker',
+        note:"Suggest tenant try a new bulb before dispatching an electrician.", noteType:'info' },
+      { letter:'C', text:'It\'s a hardwired fixture — no bulb to replace', value:'hardwired',   next:'elec_breaker' }
+    ]
+  },
+
+  elec_smoke: {
+    id: 'elec_smoke', text: "What is the smoke detector doing?",
+    type: 'choice', field: 'elecSmokeIssue',
+    choices: [
+      { letter:'A', text:'Chirping / beeping (low battery)',
+        value:'chirping low battery', next:'elec_smoke_battery' },
+      { letter:'B', text:'Full alarm going off with no fire',  value:'false alarm', next:'elec_safety' },
+      { letter:'C', text:'Not working at all or missing',      value:'not working',  next:'elec_safety' }
+    ]
+  },
+
+  elec_smoke_battery: {
+    id: 'elec_smoke_battery', text: "Chirping almost always means a low battery. Have they tried replacing the battery?",
+    type: 'choice', field: 'elecSmokeBattery',
+    choices: [
+      { letter:'A', text:'Yes — replaced battery, still chirping',   value:'still chirping after battery', next:'elec_safety' },
+      { letter:'B', text:'No — haven\'t tried yet',                  value:'not tried',                    next:'elec_safety',
+        note:"Smoke detector chirping = low battery. This is tenant responsibility. Advise them to replace the battery (9V) before dispatching.", noteType:'info' }
+    ]
+  },
+
+  elec_breaker: {
+    id: 'elec_breaker', text: "Have they checked the main breaker panel for any tripped breakers?",
+    type: 'choice', field: 'elecBreaker',
+    choices: [
+      { letter:'A', text:'Yes — no tripped breakers found',                         value:'no trips',           next:'elec_gfci' },
+      { letter:'B', text:'Yes — found a tripped breaker, reset it, now working',    value:'reset fixed it',     next:'elec_resolved' },
+      { letter:'C', text:'Yes — reset it, but it keeps tripping again',             value:'keeps tripping',     next:'elec_safety' },
+      { letter:'D', text:'No — haven\'t checked yet',                               value:'not checked',        next:'elec_gfci',
+        note:"Ask tenant to check the breaker panel (main panel, often in a closet or utility area) and flip any breakers fully off then back on.", noteType:'info' },
+      { letter:'E', text:'Unknown',                                                  value:'unknown',            next:'elec_gfci' }
+    ]
+  },
+
+  elec_resolved: {
+    id: 'elec_resolved',
+    text: "Breaker reset resolved it — no dispatch needed. Do you want to document this?",
+    type: 'choice', field: 'elecResolvedAction',
+    choices: [
+      { letter:'A', text:'Yes — document it for the Aptly card', value:'document', next:'DONE' },
+      { letter:'B', text:'No — just close it out',               value:'close',    next:'DONE' }
+    ]
+  },
+
+  elec_gfci: {
+    id: 'elec_gfci',
+    text: "Have they checked nearby GFCI outlets? (Found in bathrooms, kitchens, garages, and exterior — they have small TEST and RESET buttons.)",
+    type: 'choice', field: 'elecGFCI',
+    choices: [
+      { letter:'A', text:'Yes — found a tripped GFCI, pressed RESET, now working', value:'gfci fixed', next:'elec_resolved' },
+      { letter:'B', text:'Yes — no tripped GFCIs found',                           value:'no tripped gfci', next:'elec_safety' },
+      { letter:'C', text:'No — haven\'t checked',                                  value:'not checked', next:'elec_safety',
+        note:"Ask tenant to locate all GFCI outlets (bathroom, kitchen, garage, exterior) and press the RESET button on each one.", noteType:'info' },
+      { letter:'D', text:'Not applicable for this issue',                          value:'n/a', next:'elec_safety' }
+    ]
+  },
+
+  elec_safety: {
+    id: 'elec_safety', text: "Any sparking, burning smell, flickering, or exposed wiring?",
+    type: 'choice', field: 'elecSafety',
+    choices: [
+      { letter:'A', text:'Yes — sparking or exposed wire',
+        value:'sparking/exposed wire', next:'elec_duration',
+        flag:'emergency', emergency:'ELECTRICAL HAZARD — Sparking or exposed wiring is a fire risk. Instruct tenant NOT to use that outlet or switch. Contact management and an emergency electrician NOW. Do not use normal dispatch queue.' },
+      { letter:'B', text:'Yes — burning smell from an outlet or panel',
+        value:'burning smell', next:'elec_duration',
+        flag:'emergency', emergency:'ELECTRICAL HAZARD — Burning smell from electrical is a fire risk. Instruct tenant to unplug all devices in that area. Contact management and an emergency electrician NOW.' },
+      { letter:'C', text:'No safety concerns',
+        value:'none', next:'elec_duration' }
+    ]
+  },
+
+  elec_duration: {
+    id: 'elec_duration', text: "How long has this electrical issue been going on?",
+    type: 'choice', field: 'issueDuration',
+    choices: [
+      { letter:'A', text:'Just noticed today',  value:'just today',       next:'entry_permission' },
+      { letter:'B', text:'A few days',          value:'a few days',       next:'entry_permission' },
+      { letter:'C', text:'About a week',        value:'about a week',     next:'entry_permission' },
+      { letter:'D', text:'More than a week',    value:'more than a week', next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // APPLIANCE FLOW
+  // ════════════════════════════════════════════════════════════════
+  appl_which: {
+    id: 'appl_which', text: "Which appliance?",
+    type: 'choice', field: 'applWhich',
+    choices: [
+      { letter:'A', text:'Refrigerator',      value:'refrigerator',      next:'appl_ownership' },
+      { letter:'B', text:'Stove or oven',     value:'stove/oven',        next:'appl_ownership' },
+      { letter:'C', text:'Dishwasher',        value:'dishwasher',        next:'appl_ownership' },
+      { letter:'D', text:'Garbage disposal',  value:'garbage disposal',  next:'appl_disposal' },
+      { letter:'E', text:'Washing machine',   value:'washing machine',   next:'appl_ownership' },
+      { letter:'F', text:'Dryer',             value:'dryer',             next:'appl_ownership' },
+      { letter:'G', text:'Microwave',         value:'microwave',         next:'appl_ownership' },
+      { letter:'H', text:'Water heater',      value:'water heater',      next:'appl_ownership' }
+    ]
+  },
+
+  appl_disposal: {
+    id: 'appl_disposal',
+    text: "Before we dispatch for a garbage disposal, have they tried the red reset button on the bottom of the unit (under the sink)?",
+    type: 'choice', field: 'applDisposalReset',
+    choices: [
+      { letter:'A', text:'Yes — pressed reset button, still not working',         value:'tried reset, not working',  next:'appl_ownership' },
+      { letter:'B', text:'Yes — pressed reset button and it\'s working now!',     value:'reset fixed it',            next:'appl_disposal_resolved' },
+      { letter:'C', text:'No — haven\'t tried yet',                               value:'not tried',                 next:'appl_disposal_suggest',
+        note:"Tell tenant to look under the sink for the disposal unit, find the small red reset button on the bottom, and press it firmly. This fixes roughly 30% of disposal calls.", noteType:'info' }
+    ]
+  },
+
+  appl_disposal_suggest: {
+    id: 'appl_disposal_suggest',
+    text: "Let's hold off on dispatch until the tenant tries the reset button. Would you like a text message to send them with instructions?",
+    type: 'choice', field: 'applDisposalSuggestAction',
+    choices: [
+      { letter:'A', text:'Yes — generate a text I can send them', value:'send text', next:'DONE' },
+      { letter:'B', text:'No — I\'ll call them myself',           value:'call',      next:'DONE' }
+    ]
+  },
+
+  appl_disposal_resolved: {
+    id: 'appl_disposal_resolved',
+    text: "Reset button fixed it — no dispatch needed! Do you want to document this?",
+    type: 'choice', field: 'applDisposalResolvedAction',
+    choices: [
+      { letter:'A', text:'Yes — document it', value:'document', next:'DONE' },
+      { letter:'B', text:'No — just close',   value:'close',    next:'DONE' }
+    ]
+  },
+
+  appl_ownership: {
+    id: 'appl_ownership', text: "Is this appliance landlord-owned or tenant-owned?",
+    type: 'choice', field: 'applOwnership',
+    choices: [
+      { letter:'A', text:'Landlord-owned (included in the unit)',  value:'landlord-owned', next:'appl_warranty' },
+      { letter:'B', text:'Tenant-owned (tenant brought it themselves)', value:'tenant-owned', next:'appl_tenant_owned',
+        note:"Tenant-owned appliance — this is NOT the landlord's responsibility. The tenant must arrange their own repair.", noteType:'warn' },
+      { letter:'C', text:'Not sure — need to verify',              value:'unknown',        next:'appl_warranty' }
+    ]
+  },
+
+  appl_tenant_owned: {
+    id: 'appl_tenant_owned',
+    text: "Tenant-owned appliances are the tenant's responsibility to repair — we don't dispatch for these.\n\nWould you like to generate an Aptly card comment documenting that the tenant was informed?",
+    type: 'choice', field: 'applTenantOwnedAction',
+    choices: [
+      { letter:'A', text:'Yes — generate the comment', value:'document', next:'DONE' },
+      { letter:'B', text:'No — I\'ll close the WO',    value:'close',    next:'DONE' }
+    ]
+  },
+
+  appl_warranty: {
+    id: 'appl_warranty', text: "Is there a home warranty on this unit?",
+    type: 'choice', field: 'applHomeWarranty',
+    choices: [
+      { letter:'A', text:'Yes — home warranty in place',
+        value:'yes', next:'appl_issue',
+        flag:'warranty', note:"⚠️ HOME WARRANTY — Call the warranty company to submit a claim. Do NOT dispatch a vendor directly.", noteType:'warn' },
+      { letter:'B', text:'No — no home warranty',   value:'no',      next:'appl_issue' },
+      { letter:'C', text:'Not sure — need to check', value:'unknown', next:'appl_issue' }
+    ]
+  },
+
+  appl_issue: {
+    id: 'appl_issue', text: "What is the appliance doing or not doing?",
+    type: 'text', field: 'applIssue',
+    placeholder: "e.g. not cooling at all, leaking water from bottom, won't turn on, making loud grinding noise…",
+    next: 'appl_duration'
+  },
+
+  appl_duration: {
+    id: 'appl_duration', text: "How long has the appliance had this problem?",
+    type: 'choice', field: 'issueDuration',
+    choices: [
+      { letter:'A', text:'Just noticed today',  value:'just today',       next:'entry_permission' },
+      { letter:'B', text:'A few days',          value:'a few days',       next:'entry_permission' },
+      { letter:'C', text:'About a week',        value:'about a week',     next:'entry_permission' },
+      { letter:'D', text:'More than a week',    value:'more than a week', next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // PEST FLOW
+  // ════════════════════════════════════════════════════════════════
+  pest_type: {
+    id: 'pest_type', text: "What type of pest?",
+    type: 'choice', field: 'pestType',
+    choices: [
+      { letter:'A', text:'Cockroaches',   value:'cockroaches', next:'pest_location' },
+      { letter:'B', text:'Bed bugs',      value:'bed bugs',    next:'pest_location',
+        flag:'emergency', emergency:'BED BUGS — This requires immediate management involvement and a specialized treatment protocol. Do NOT dispatch a regular pest control vendor. Escalate to management NOW for proper handling.' },
+      { letter:'C', text:'Mice or rats',  value:'mice/rats',   next:'pest_location' },
+      { letter:'D', text:'Ants',          value:'ants',        next:'pest_location' },
+      { letter:'E', text:'Wasps or bees', value:'wasps/bees',  next:'pest_location' },
+      { letter:'F', text:'Other',         value:'other pests', next:'pest_location' }
+    ]
+  },
+
+  pest_location: {
+    id: 'pest_location', text: "Where are they seeing them?",
+    type: 'choice', field: 'pestLocation',
+    choices: [
+      { letter:'A', text:'Kitchen',                      value:'kitchen',          next:'pest_duration' },
+      { letter:'B', text:'Bathroom',                     value:'bathroom',         next:'pest_duration' },
+      { letter:'C', text:'Bedroom',                      value:'bedroom',          next:'pest_duration' },
+      { letter:'D', text:'Throughout the entire unit',   value:'throughout unit',  next:'pest_duration' },
+      { letter:'E', text:'Exterior only (outside unit)', value:'exterior',         next:'pest_duration' }
+    ]
+  },
+
+  pest_duration: {
+    id: 'pest_duration', text: "How long has this been going on?",
+    type: 'choice', field: 'issueDuration',
+    choices: [
+      { letter:'A', text:'Just noticed',      value:'just noticed',   next:'pest_action' },
+      { letter:'B', text:'A few days',        value:'a few days',     next:'pest_action' },
+      { letter:'C', text:'A week or more',    value:'a week or more', next:'pest_action' }
+    ]
+  },
+
+  pest_action: {
+    id: 'pest_action', text: "Has the tenant done anything to try to address it?",
+    type: 'choice', field: 'pestTenantAction',
+    choices: [
+      { letter:'A', text:'Yes — tried sprays or traps', value:'yes - tried treatment', next:'entry_permission' },
+      { letter:'B', text:'No — nothing tried yet',      value:'no',                    next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // DOOR / WINDOW / LOCK FLOW
+  // ════════════════════════════════════════════════════════════════
+  door_which: {
+    id: 'door_which', text: "Which door, window, or lock? (Describe it)",
+    type: 'text', field: 'doorWhich',
+    placeholder: "e.g. front entry door, master bedroom window, sliding glass patio door…",
+    next: 'door_issue'
+  },
+
+  door_issue: {
+    id: 'door_issue', text: "What is the issue?",
+    type: 'choice', field: 'doorIssue',
+    choices: [
+      { letter:'A', text:'Won\'t lock or latch',                value:"won't lock/latch",         next:'door_security' },
+      { letter:'B', text:'Won\'t close properly',               value:"won't close properly",     next:'door_security' },
+      { letter:'C', text:'Won\'t open',                         value:"won't open",               next:'door_security' },
+      { letter:'D', text:'Broken glass',                        value:'broken glass',             next:'door_security' },
+      { letter:'E', text:'Damaged frame or weatherstripping',   value:'damaged frame/weatherstrip', next:'door_security' },
+      { letter:'F', text:'Key or lock cylinder issue',          value:'key/lock cylinder issue',  next:'door_security' }
+    ]
+  },
+
+  door_security: {
+    id: 'door_security',
+    text: "Is this a security issue — meaning the tenant CANNOT lock or fully secure their unit right now?",
+    type: 'choice', field: 'doorSecurity',
+    choices: [
+      { letter:'A', text:'Yes — tenant cannot secure their unit',
+        value:'yes - cannot secure', next:'entry_permission',
+        flag:'emergency', emergency:'SECURITY EMERGENCY — Tenant cannot lock or secure their unit. This requires a same-day locksmith or repair. Escalate immediately — do NOT use the normal dispatch queue.' },
+      { letter:'B', text:'No — they can still lock up (functional/cosmetic issue only)',
+        value:'no - can still lock', next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // FLOORING FLOW
+  // ════════════════════════════════════════════════════════════════
+  floor_type: {
+    id: 'floor_type', text: "What type of flooring?",
+    type: 'choice', field: 'floorType',
+    choices: [
+      { letter:'A', text:'Carpet',            value:'carpet',          next:'floor_issue' },
+      { letter:'B', text:'Hardwood or laminate', value:'hardwood/laminate', next:'floor_issue' },
+      { letter:'C', text:'Tile',              value:'tile',            next:'floor_issue' },
+      { letter:'D', text:'Vinyl or LVP',      value:'vinyl/LVP',       next:'floor_issue' }
+    ]
+  },
+
+  floor_issue: {
+    id: 'floor_issue', text: "What is the flooring issue?",
+    type: 'choice', field: 'floorIssue',
+    choices: [
+      { letter:'A', text:'Buckling or warping',     value:'buckling/warping', next:'floor_water' },
+      { letter:'B', text:'Soft spot underfoot',     value:'soft spot',        next:'floor_water' },
+      { letter:'C', text:'Cracked or broken tile',  value:'cracked/broken tile', next:'floor_duration' },
+      { letter:'D', text:'Staining',                value:'staining',         next:'floor_duration' },
+      { letter:'E', text:'Loose or lifting',        value:'loose/lifting',    next:'floor_water' },
+      { letter:'F', text:'Carpet tear or damage',   value:'carpet damage',    next:'floor_duration' }
+    ]
+  },
+
+  floor_water: {
+    id: 'floor_water',
+    text: "Buckling, soft spots, and lifting are often signs of water damage underneath. Is there a plumbing fixture or exterior wall nearby?",
+    type: 'choice', field: 'floorWater',
+    choices: [
+      { letter:'A', text:'Yes — near plumbing, washer, or exterior wall',
+        value:'yes - near water source', next:'floor_duration',
+        note:"Buckling/soft floor near a water source likely means sub-floor water damage. Photos needed before dispatch.", noteType:'warn' },
+      { letter:'B', text:'No — no water source nearby', value:'no',      next:'floor_duration' },
+      { letter:'C', text:'Unknown',                      value:'unknown', next:'floor_duration' }
+    ]
+  },
+
+  floor_duration: {
+    id: 'floor_duration', text: "How long has this flooring issue been present?",
+    type: 'choice', field: 'issueDuration',
+    choices: [
+      { letter:'A', text:'Just noticed',              value:'just noticed',         next:'entry_permission' },
+      { letter:'B', text:'A few days to a week',      value:'a few days to a week', next:'entry_permission' },
+      { letter:'C', text:'A few weeks',               value:'a few weeks',          next:'entry_permission' },
+      { letter:'D', text:'Has been there for months', value:'months',               next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // ROOF / CEILING FLOW
+  // ════════════════════════════════════════════════════════════════
+  roof_active: {
+    id: 'roof_active', text: "Is water actively coming through, or is this staining only?",
+    type: 'choice', field: 'roofActive',
+    choices: [
+      { letter:'A', text:'Active drip or flow of water',              value:'active drip/flow', next:'roof_rain' },
+      { letter:'B', text:'Staining only — no active water right now', value:'staining only',    next:'roof_rain' },
+      { letter:'C', text:'Not sure',                                  value:'not sure',          next:'roof_rain' }
+    ]
+  },
+
+  roof_rain: {
+    id: 'roof_rain', text: "Did this appear after recent rainfall?",
+    type: 'choice', field: 'roofRain',
+    choices: [
+      { letter:'A', text:'Yes — appeared after rain', value:'after rain', next:'roof_recent_work' },
+      { letter:'B', text:'No — no recent rain',       value:'no rain',    next:'roof_recent_work' },
+      { letter:'C', text:'Unknown',                   value:'unknown',    next:'roof_recent_work' }
+    ]
+  },
+
+  roof_recent_work: {
+    id: 'roof_recent_work', text: "Has any roofing work been done on this property recently?",
+    type: 'choice', field: 'roofRecentWork',
+    choices: [
+      { letter:'A', text:'Yes — within the last year',
+        value:'within last year', next:'entry_permission',
+        flag:'warranty', note:"⚠️ WARRANTY FLAG — Roof work within the last year. Call the original roofing contractor before dispatching anyone new.", noteType:'warn' },
+      { letter:'B', text:'Yes — 1 to 5 years ago', value:'1-5 years ago', next:'entry_permission' },
+      { letter:'C', text:'No / not aware of any',  value:'no',            next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // EXTERIOR / OTHER FLOW
+  // ════════════════════════════════════════════════════════════════
+  other_describe: {
+    id: 'other_describe', text: "Describe the issue and where it is located:",
+    type: 'text', field: 'otherDescription',
+    placeholder: "e.g. fence panel down on north side, exterior light out near Unit 8, cracked sidewalk…",
+    next: 'other_safety'
+  },
+
+  other_safety: {
+    id: 'other_safety',
+    text: "Is this a safety hazard (could cause injury or significant property damage if not addressed quickly)?",
+    type: 'choice', field: 'otherSafety',
+    choices: [
+      { letter:'A', text:'Yes — potential safety or liability hazard', value:'yes', next:'entry_permission' },
+      { letter:'B', text:'No — cosmetic or low-urgency issue',         value:'no',  next:'entry_permission' }
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // UNIVERSAL QUESTIONS
+  // ════════════════════════════════════════════════════════════════
+  entry_permission: {
+    id: 'entry_permission', text: "Can the vendor enter the unit without the tenant present?",
+    type: 'choice', field: 'entryPermission',
+    choices: [
+      { letter:'A', text:'Yes — vendor can enter without tenant home', value:'yes - can enter without tenant', next:'photos' },
+      { letter:'B', text:'No — tenant must be home for the visit',    value:'no - tenant must be home',       next:'entry_times' },
+      { letter:'C', text:'Unknown — need to check with tenant',       value:'unknown',                        next:'photos' }
+    ]
+  },
+
+  entry_times: {
+    id: 'entry_times', text: "What days and times is the tenant available?",
+    type: 'text', field: 'entryTimes',
+    placeholder: "e.g. Weekdays after 4pm, Saturday mornings, will call to schedule…",
+    next: 'photos'
+  },
+
+  photos: {
+    id: 'photos', text: "Do you have photos of the issue?",
+    type: 'choice', field: 'photos',
+    choices: [
+      { letter:'A', text:'Yes — photos available',                  value:'yes',               next:'DONE' },
+      { letter:'B', text:"No — I'll request them from the tenant",  value:'no - will request', next:'DONE' },
+      { letter:'C', text:'Not needed for this type of issue',       value:'not needed',        next:'DONE' }
+    ]
+  }
+
+}; // end FLOW
+
+// ════════════════════════════════════════════════════════════════
+// ROUTING LOGIC
+// ════════════════════════════════════════════════════════════════
+function getNextId(qId, choiceObj) {
+  // Aptly source: after issue_category, go to aptly_summary then entry_permission
+  if (qId === 'issue_category' && source === 'aptly') return 'aptly_summary';
+  // Skip rm_complaint for non-RM sources
+  if (qId === 'property_name') return source === 'rm' ? 'rm_complaint' : 'issue_category';
+  const q = FLOW[qId];
+  if (q.type === 'text') return q.next;
+  return choiceObj ? choiceObj.next : null;
+}
+
+// ════════════════════════════════════════════════════════════════
+// ENGINE
+// ════════════════════════════════════════════════════════════════
+function startTriage() {
+  document.getElementById('welcome').style.display = 'none';
+  document.querySelectorAll('.source-btn').forEach(b => b.disabled = true);
+  triageActive = true;
+  ctx = {}; notes = []; emergencyMsg = null; warrantyFlag = false;
+  document.getElementById('emergency-banner').classList.remove('show');
+  showQuestion('aptly_check');
+}
+
+function showQuestion(qId) {
+  if (qId === 'DONE' || qId === null) { generateAndShowOutputs(); return; }
+  currentQ = FLOW[qId];
+  if (!currentQ) { generateAndShowOutputs(); return; }
+
+  const isChoice = currentQ.type === 'choice';
+  const wrap  = document.getElementById('input-wrap');
+  const input = document.getElementById('msg-input');
+  const hint  = document.getElementById('input-hint');
+
+  const col = addAIBubble(currentQ.text);
+
+  if (isChoice) {
+    const choiceDiv = document.createElement('div');
+    choiceDiv.className = 'choices';
+    currentQ.choices.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<span class="choice-letter">${c.letter}</span>${escH(c.text)}`;
+      btn.addEventListener('click', () => handleChoice(c, choiceDiv));
+      choiceDiv.appendChild(btn);
+    });
+    col.appendChild(choiceDiv);
+    wrap.classList.add('disabled');
+    hint.textContent = '↑ Click a button above to answer';
+  } else {
+    input.placeholder = currentQ.placeholder || 'Type your answer…';
+    input.value = '';
+    wrap.classList.remove('disabled');
+    hint.textContent = 'Type your answer and press Enter (or click Send)';
+    setTimeout(() => input.focus(), 100);
+  }
+  scrollBottom();
+}
+
+function handleChoice(choice, choiceDiv) {
+  choiceDiv.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+  ctx[currentQ.field] = choice.value;
+  addUserBubble(choice.text);
+  if (choice.flag === 'emergency') triggerEmergency(choice.emergency);
+  if (choice.flag === 'warranty')  warrantyFlag = true;
+  if (choice.note) showInlineNote(choice.note, choice.noteType || 'info');
+  const nextId = getNextId(currentQ.id, choice);
+  setTimeout(() => showQuestion(nextId), 380);
+}
+
+function submitText() {
+  if (!currentQ || currentQ.type !== 'text') return;
+  const val = document.getElementById('msg-input').value.trim();
+  if (!val) return;
+  ctx[currentQ.field] = val;
+  addUserBubble(val);
+  document.getElementById('msg-input').value = '';
+  document.getElementById('msg-input').style.height = 'auto';
+  const nextId = getNextId(currentQ.id, null);
+  setTimeout(() => showQuestion(nextId), 380);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitText(); }
+}
+
+// ════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════════════
+function addAIBubble(text) {
+  const chat = document.getElementById('chat');
+  const msg = document.createElement('div'); msg.className = 'msg ai';
+  const av  = document.createElement('div'); av.className = 'avatar ai'; av.textContent = 'AI';
+  const col = document.createElement('div'); col.className = 'msg-col';
+  const bub = document.createElement('div'); bub.className = 'bubble';
+  bub.innerHTML = text.replace(/\n/g, '<br>');
+  col.appendChild(bub); msg.appendChild(av); msg.appendChild(col);
+  chat.appendChild(msg); scrollBottom(); return col;
+}
+
+function addUserBubble(text) {
+  const chat = document.getElementById('chat');
+  const msg = document.createElement('div'); msg.className = 'msg user';
+  const av  = document.createElement('div'); av.className = 'avatar user-av'; av.textContent = 'S';
+  const col = document.createElement('div'); col.className = 'msg-col';
+  const bub = document.createElement('div'); bub.className = 'bubble'; bub.textContent = text;
+  col.appendChild(bub); msg.appendChild(av); msg.appendChild(col);
+  chat.appendChild(msg); scrollBottom();
+}
+
+function showInlineNote(text, type) {
+  const chat = document.getElementById('chat');
+  const note = document.createElement('div');
+  note.className = `inline-note ${type}`;
+  note.innerHTML = escH(text).replace(/\n/g, '<br>');
+  chat.appendChild(note); scrollBottom();
+}
+
+function triggerEmergency(msg) {
+  emergencyMsg = msg;
+  document.getElementById('emergency-body').textContent = msg;
+  const banner = document.getElementById('emergency-banner');
+  banner.classList.add('show');
+  banner.scrollIntoView({ behavior: 'smooth' });
+}
+
+function escH(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function scrollBottom() { requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' })); }
+
+// ════════════════════════════════════════════════════════════════
+// OUTPUT GENERATION
+// ════════════════════════════════════════════════════════════════
+function getDispatchStatus() {
+  if (emergencyMsg)                                                return 'EMERGENCY — DO NOT USE NORMAL DISPATCH';
+  if (ctx.applOwnership === 'tenant-owned')                       return 'DO NOT DISPATCH — Tenant-owned appliance';
+  if (ctx.warrantyDecision === 'stop')                            return 'DO NOT DISPATCH — Warranty: call original vendor';
+  if (ctx.applHomeWarranty === 'yes')                             return 'DO NOT DISPATCH — Submit via home warranty';
+  if (ctx.plumbDrainDecision === 'tenant responsibility')         return 'DO NOT DISPATCH — Tenant responsibility';
+  if (ctx.hvacResolvedAction || ctx.elecResolvedAction ||
+      ctx.applDisposalResolvedAction)                             return 'NO DISPATCH — Resolved without vendor';
+  if (ctx.applDisposalSuggestAction)                              return 'HOLD — Awaiting tenant to try reset button';
+  if (ctx.entryPermission === 'unknown')                          return 'HOLD — Need entry confirmation from tenant';
+  if (ctx.photos === 'no - will request' && photosRequired())    return 'HOLD — Awaiting photos from tenant';
+  if (warrantyFlag)                                               return 'HOLD — Review warranty flag before dispatching';
+  return 'READY TO DISPATCH';
+}
+
+function photosRequired() {
+  const cat = ctx.issueCategory;
+  if (!cat) return false;
+  if (['appliance','flooring','roof'].includes(cat)) return true;
+  if (cat === 'plumbing'   && ctx.plumbWaterDamage === 'yes - visible damage') return true;
+  if (cat === 'door'       && ctx.doorIssue === 'broken glass') return true;
+  if (cat === 'other'      && ctx.otherSafety === 'yes') return true;
+  return false;
+}
+
+function needsSMS() {
+  if (ctx.applDisposalSuggestAction === 'send text') return true;
+  if (ctx.entryPermission === 'unknown') return true;
+  if (ctx.photos === 'no - will request' && photosRequired()) return true;
+  return false;
+}
+
+function buildSMS() {
+  const lines = [`Hi, this is Turman Co Maintenance regarding your work order for Unit ${ctx.unitNumber || '[unit]'}.`];
+  if (ctx.applDisposalSuggestAction === 'send text') {
+    lines.push(`Before we schedule a technician for the garbage disposal, could you try this quick fix: look under the sink for the disposal unit and press the small red reset button on the bottom firmly. If that gets it working, no service visit needed! Please let us know.`);
+  }
+  if (ctx.photos === 'no - will request' && photosRequired()) {
+    lines.push(`Could you please send us a photo or two of the ${getShortIssueLabel()}? This helps us send the right vendor with the right parts.`);
+  }
+  if (ctx.entryPermission === 'unknown') {
+    lines.push(`Will you need to be home when our vendor visits, or can they enter using our key on file?`);
+  }
+  lines.push(`Please reply at your earliest convenience. Thank you! – Turman Co Maintenance`);
+  return lines.join('\n\n');
+}
+
+function getShortIssueLabel() {
+  const map = { plumbing:'plumbing issue', hvac:'HVAC issue', electrical:'electrical issue',
+    appliance: ctx.applWhich || 'appliance', pest:'pest issue',
+    door:'door/lock issue', flooring:'flooring issue', roof:'ceiling/roof issue', other:'issue' };
+  return map[ctx.issueCategory] || 'issue';
+}
+
+function buildIssueSummary() {
+  const cat = ctx.issueCategory;
+  if (!cat) return ctx.aptlySummary ? 'See AI agent summary below' : 'Not captured';
+  switch(cat) {
+    case 'plumbing':   return `Plumbing — ${ctx.plumbIssue || ''} at ${ctx.plumbLocation || 'unknown location'}`;
+    case 'hvac':       return `HVAC — ${ctx.hvacType || 'unknown issue'}`;
+    case 'electrical': return `Electrical — ${ctx.elecWhat || 'unknown issue'}`;
+    case 'appliance':  return `Appliance (${ctx.applWhich || 'unknown'}) — ${ctx.applIssue || 'see description'}`;
+    case 'pest':       return `Pest — ${ctx.pestType || 'unknown type'} in ${ctx.pestLocation || 'unit'}`;
+    case 'door':       return `Door/Lock — ${ctx.doorIssue || ''} (${ctx.doorWhich || 'unspecified'})`;
+    case 'flooring':   return `Flooring — ${ctx.floorIssue || ''} (${ctx.floorType || 'unknown type'})`;
+    case 'roof':       return `Roof/Ceiling — ${ctx.roofActive || 'staining or drip'}`;
+    case 'other':      return `Other — ${ctx.otherDescription || 'see description'}`;
+    default: return cat;
+  }
+}
+
+function buildIssueDetails() {
+  const lines = [];
+  const cat = ctx.issueCategory;
+  switch(cat) {
+    case 'plumbing':
+      if (ctx.plumbLocation)    lines.push(`Location: ${ctx.plumbLocation}`);
+      if (ctx.plumbIssue)       lines.push(`Issue: ${ctx.plumbIssue}`);
+      if (ctx.plumbSeverity)    lines.push(`Severity: ${ctx.plumbSeverity}`);
+      if (ctx.plumbWaterDamage && ctx.plumbWaterDamage !== 'no') lines.push(`Water damage present: ${ctx.plumbWaterDamage}`);
+      break;
+    case 'hvac':
+      if (ctx.hvacType)       lines.push(`Type: ${ctx.hvacType}`);
+      if (ctx.hvacIndoorTemp) lines.push(`Indoor temp: ${ctx.hvacIndoorTemp}`);
+      if (ctx.hvacNoise)      lines.push(`Noise: ${ctx.hvacNoise}`);
+      if (ctx.hvacSmell && ctx.hvacSmell !== 'none') lines.push(`Smell: ${ctx.hvacSmell}`);
+      if (ctx.hvacFilter)     lines.push(`Filter status: ${ctx.hvacFilter}`);
+      if (ctx.hvacThermostat) lines.push(`Thermostat: ${ctx.hvacThermostat}`);
+      break;
+    case 'electrical':
+      if (ctx.elecWhat)    lines.push(`Issue: ${ctx.elecWhat}`);
+      if (ctx.elecBreaker) lines.push(`Breaker checked: ${ctx.elecBreaker}`);
+      if (ctx.elecGFCI)    lines.push(`GFCI checked: ${ctx.elecGFCI}`);
+      if (ctx.elecSafety && ctx.elecSafety !== 'none') lines.push(`Safety concern: ${ctx.elecSafety}`);
+      break;
+    case 'appliance':
+      if (ctx.applWhich)         lines.push(`Appliance: ${ctx.applWhich}`);
+      if (ctx.applIssue)         lines.push(`Problem: ${ctx.applIssue}`);
+      if (ctx.applDisposalReset) lines.push(`Disposal reset tried: ${ctx.applDisposalReset}`);
+      if (ctx.applOwnership)     lines.push(`Ownership: ${ctx.applOwnership}`);
+      if (ctx.applHomeWarranty && ctx.applHomeWarranty !== 'no') lines.push(`Home warranty: ${ctx.applHomeWarranty}`);
+      break;
+    case 'pest':
+      if (ctx.pestType)         lines.push(`Pest type: ${ctx.pestType}`);
+      if (ctx.pestLocation)     lines.push(`Location in unit: ${ctx.pestLocation}`);
+      if (ctx.pestTenantAction) lines.push(`Tenant treatment attempted: ${ctx.pestTenantAction}`);
+      break;
+    case 'door':
+      if (ctx.doorWhich)    lines.push(`Which: ${ctx.doorWhich}`);
+      if (ctx.doorIssue)    lines.push(`Issue: ${ctx.doorIssue}`);
+      if (ctx.doorSecurity === 'yes - cannot secure') lines.push(`⚠️ SECURITY: Tenant cannot lock unit`);
+      break;
+    case 'flooring':
+      if (ctx.floorType)  lines.push(`Flooring type: ${ctx.floorType}`);
+      if (ctx.floorIssue) lines.push(`Issue: ${ctx.floorIssue}`);
+      if (ctx.floorWater && ctx.floorWater !== 'no') lines.push(`Near water source: ${ctx.floorWater}`);
+      break;
+    case 'roof':
+      if (ctx.roofActive)     lines.push(`Active water: ${ctx.roofActive}`);
+      if (ctx.roofRain)       lines.push(`After rain: ${ctx.roofRain}`);
+      if (ctx.roofRecentWork) lines.push(`Recent roofing work: ${ctx.roofRecentWork}`);
+      break;
+    case 'other':
+      if (ctx.otherDescription) lines.push(ctx.otherDescription);
+      if (ctx.otherSafety === 'yes') lines.push(`⚠️ Safety/liability hazard identified`);
+      break;
+  }
+  return lines.join('\n');
+}
+
+function buildWODescription() {
+  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const woNum = document.getElementById('wo-number').value.trim();
+  const lines = [];
+  lines.push(`WORK ORDER${woNum ? ' #' + woNum : ''} — ${today}`);
+  lines.push(`UNIT: ${ctx.unitNumber || 'Not provided'}`);
+  lines.push(`PROPERTY: ${ctx.propertyName || 'Not provided'}`);
+  lines.push('');
+  lines.push(`ISSUE: ${buildIssueSummary()}`);
+  const details = buildIssueDetails();
+  if (details) { lines.push(''); lines.push(details); }
+  if (ctx.aptlySummary) { lines.push(''); lines.push(`AI AGENT NOTES: ${ctx.aptlySummary}`); }
+  if (ctx.rmComplaint)  { lines.push(''); lines.push(`TENANT'S ORIGINAL COMPLAINT:\n${ctx.rmComplaint}`); }
+  if (ctx.issueDuration) { lines.push(''); lines.push(`REPORTED DURATION: ${ctx.issueDuration}`); }
+  lines.push('');
+  lines.push(`ENTRY: ${ctx.entryPermission || 'Not confirmed'}`);
+  if (ctx.entryTimes) lines.push(`AVAILABILITY: ${ctx.entryTimes}`);
+  if (ctx.photos === 'yes') lines.push('PHOTOS: Available — confirm before scheduling');
+  if (warrantyFlag) { lines.push(''); lines.push(`⚠️ WARRANTY FLAG — Do not dispatch until warranty has been reviewed.`); }
+  if (emergencyMsg) { lines.push(''); lines.push(`🚨 EMERGENCY: ${emergencyMsg}`); }
+  return lines.join('\n');
+}
+
+function buildAptlyComment() {
+  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const srcLabel = { aptly:'Aptly AI Agent', phone:'Phone Call', rm:'Rent Manager / TWA' }[source];
+  const status = getDispatchStatus();
+  const lines = [];
+  lines.push(`✅ Triage completed via WO Triage Tool — ${today}`);
+  lines.push(`Source: ${srcLabel}`);
+  lines.push('');
+  const aptlyChecked = ctx.aptlyChecked === 'clear' || ctx.aptlyRechecked === 'clear'
+    ? 'Yes — all clear' : ctx.aptlyChecked === 'findings' || ctx.aptlyRechecked === 'findings'
+    ? 'Yes — findings noted' : 'Reviewed during triage';
+  lines.push(`Aptly card reviewed: ${aptlyChecked}`);
+  if (ctx.aptlyNote)     lines.push(`Findings: ${ctx.aptlyNote}`);
+  if (ctx.aptlyFindings) lines.push(`Aptly finding type: ${ctx.aptlyFindings}`);
+  lines.push('');
+  lines.push(`ISSUE`);
+  lines.push(`${buildIssueSummary()}`);
+  const det = buildIssueDetails();
+  if (det) lines.push(det);
+  if (ctx.aptlySummary) lines.push(`AI agent notes: ${ctx.aptlySummary}`);
+  if (ctx.issueDuration) lines.push(`Duration reported: ${ctx.issueDuration}`);
+  lines.push('');
+  lines.push(`LOGISTICS`);
+  lines.push(`Entry: ${ctx.entryPermission || 'Not confirmed'}`);
+  if (ctx.entryTimes) lines.push(`Availability: ${ctx.entryTimes}`);
+  lines.push(`Photos: ${ctx.photos || 'Not confirmed'}`);
+  const advisories = [];
+  if (ctx.plumbToiletReported === 'informational') advisories.push('Tenant informed of flapper fix option for running toilet');
+  if (ctx.plumbDrainDecision === 'tenant responsibility') advisories.push('Single drain clog determined to be tenant responsibility — tenant informed');
+  if (ctx.elecBulb === 'not tried')          advisories.push('Tenant advised to try a new light bulb first');
+  if (ctx.elecBreaker === 'not checked')     advisories.push('Tenant advised to check breaker panel');
+  if (ctx.elecGFCI === 'not checked')        advisories.push('Tenant advised to check GFCI outlets');
+  if (ctx.hvacThermostat === 'not checked')  advisories.push('Tenant advised to check/replace thermostat batteries');
+  if (ctx.applDisposalReset === 'not tried') advisories.push('Tenant advised to try disposal reset button before dispatch');
+  if (ctx.elecSmokeBattery === 'not tried')  advisories.push('Tenant advised to replace smoke detector battery (tenant responsibility)');
+  if (advisories.length) {
+    lines.push('');
+    lines.push('TROUBLESHOOTING / ADVISORIES');
+    advisories.forEach(a => lines.push(`• ${a}`));
+  }
+  if (warrantyFlag) { lines.push(''); lines.push(`⚠️ WARRANTY FLAG — Reviewed before dispatch decision.`); }
+  if (emergencyMsg) { lines.push(''); lines.push(`🚨 EMERGENCY NOTED — ${emergencyMsg}`); }
+  lines.push('');
+  lines.push(`DISPATCH DECISION: ${status}`);
+  return lines.join('\n');
+}
+
+function generateAndShowOutputs() {
+  document.getElementById('input-wrap').classList.add('disabled');
+  document.getElementById('input-hint').textContent = 'Triage complete — use the Copy buttons below';
+  const status    = getDispatchStatus();
+  const statusCls = status.startsWith('READY')    ? 'status-ready'
+                  : status.startsWith('HOLD')      ? 'status-hold'
+                  : status.startsWith('EMERGENCY') ? 'status-emerg'
+                  : 'status-stop';
+  const smsText   = needsSMS() ? buildSMS() : null;
+  const woText    = buildWODescription();
+  const aptlyText = buildAptlyComment();
+  addAIBubble(
+    status.startsWith('READY')     ? "✅ All set — I have everything needed. Copy each output below and paste it where it needs to go."
+    : status.startsWith('HOLD')    ? "⚠️ One or two items need follow-up before dispatching. See the outputs below."
+    : status.startsWith('EMERGENCY') ? "🚨 Emergency situation — see the banner at the top. Do not use the normal dispatch queue."
+    : "🛑 Based on the information gathered, we should not dispatch for this work order. See the Aptly comment below."
+  );
+  const card = document.createElement('div');
+  card.className = 'output-card';
+  const hdr = document.createElement('div');
+  hdr.className = 'output-header';
+  hdr.innerHTML = `<span class="output-header-title">📊 Triage Complete</span><span class="output-status ${statusCls}">${status}</span>`;
+  card.appendChild(hdr);
+  if (smsText) {
+    const note = document.createElement('div');
+    note.className = 'output-notes';
+    note.innerHTML = '📱 <strong>Action needed:</strong> Send the SMS below, then move the Aptly card to <strong>"Holding – Admin"</strong> until the tenant replies.';
+    card.appendChild(note);
+    card.appendChild(buildSection('📱', 'SMS to Tenant', smsText));
+  }
+  card.appendChild(buildSection('🔧', 'Work Order Description (for vendor)', woText));
+  card.appendChild(buildSection('💬', 'Aptly Card Comment', aptlyText));
+  document.getElementById('chat').appendChild(card);
+  scrollBottom();
+}
+
+function buildSection(icon, label, text) {
+  const section  = document.createElement('div');
+  section.className = 'output-section';
+  const hdr2     = document.createElement('div'); hdr2.className = 'output-section-hdr';
+  const lbl      = document.createElement('span'); lbl.className = 'output-section-label'; lbl.textContent = `${icon} ${label}`;
+  const copyBtn  = document.createElement('button'); copyBtn.className = 'btn-copy'; copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied ✓'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      copyBtn.textContent = 'Copied ✓'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+    });
+  });
+  hdr2.appendChild(lbl); hdr2.appendChild(copyBtn);
+  const textDiv = document.createElement('div'); textDiv.className = 'output-text'; textDiv.textContent = text;
+  section.appendChild(hdr2); section.appendChild(textDiv);
+  return section;
+}
+
+// ── SOURCE + RESET ────────────────────────────────────────────────────────────
+function setSource(btn, s) {
+  if (triageActive) return;
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  source = s;
+}
+
+function quickStart(src) {
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('src-' + src);
+  if (target) target.classList.add('active');
+  source = src;
+  startTriage();
+}
+
+function resetTriage() {
+  triageActive = false; ctx = {}; notes = []; emergencyMsg = null; warrantyFlag = false; currentQ = null;
+  const eb = document.getElementById('emergency-banner');
+  if (eb) eb.remove();
+  document.getElementById('chat').innerHTML = '';
+  document.getElementById('input-wrap').classList.remove('disabled');
+  document.getElementById('input-hint').textContent = 'Type your answer or click a button above';
+  document.getElementById('text-input').value = '';
+  addAIBubble("Ready for a new work order. Select a source above and press <strong>Start Triage</strong> — or use a Quick Start button.");
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  addAIBubble("👋 Hi Stephanie! Select the <strong>source</strong> of this work order above, then press <strong>Start Triage</strong> — or tap a Quick Start button to jump right in.");
+});
+</script>
+</body>
+</html>
