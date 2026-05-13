@@ -361,7 +361,7 @@ const FLOW = {
     type: 'choice', field: 'aptlyChecked',
     choices: [
       { letter:'A', text:"Yes — checked, no other open WOs and no recent repairs on this issue",
-        value:'clear', next:'tenant_name' },
+        value:'clear', next:'unit_number' },
       { letter:'B', text:"Yes — found other open work orders or recent work on this issue",
         value:'findings', next:'aptly_findings' },
       { letter:'C', text:"Not yet — I need to go check",
@@ -375,7 +375,7 @@ const FLOW = {
     text: "Take a moment to check the Aptly card now. Look for:\n• Any other open work orders for this unit\n• Same issue repaired within the last 90 days (warranty!)\n• New appliance or system installed within the last year\n\nCome back when you've reviewed it:",
     type: 'choice', field: 'aptlyRechecked',
     choices: [
-      { letter:'A', text:"All clear — no open WOs, no recent repairs", value:'clear', next:'tenant_name' },
+      { letter:'A', text:"All clear — no open WOs, no recent repairs", value:'clear', next:'unit_number' },
       { letter:'B', text:"Found something relevant",                    value:'findings', next:'aptly_findings' }
     ]
   },
@@ -392,7 +392,7 @@ const FLOW = {
         value:'new install within 1 year', next:'warranty_decision',
         flag:'warranty', note:"⚠️ WARRANTY FLAG — New install within 1 year may still be under manufacturer or contractor warranty. Contact original installer first.", noteType:'warn' },
       { letter:'C', text:"There are other open work orders for different issues (unrelated)",
-        value:'other open WOs unrelated', next:'tenant_name' },
+        value:'other open WOs unrelated', next:'unit_number' },
       { letter:'D', text:"Other notes or vendor history worth knowing — describe below",
         value:'other', next:'aptly_note' }
     ]
@@ -404,7 +404,7 @@ const FLOW = {
     type: 'choice', field: 'warrantyDecision',
     choices: [
       { letter:'A', text:"I'll note the warranty flag and continue gathering info",
-        value:'continue', next:'tenant_name' },
+        value:'continue', next:'unit_number' },
       { letter:'B', text:"I'm stopping here — I'll call the original vendor",
         value:'stop', next:'warranty_stop' }
     ]
@@ -423,15 +423,10 @@ const FLOW = {
     id: 'aptly_note',
     text: "Briefly describe what you found (this will be included in the Aptly card comment):",
     type: 'text', field: 'aptlyNote', placeholder:'e.g. Prior vendor noted slow drain in 2023, tenant has had this before…',
-    next: 'tenant_name'
+    next: 'unit_number'
   },
 
   // ── STEP 2: Basic info ─────────────────────────────────────────
-  tenant_name: {
-    id: 'tenant_name', text: "What is the tenant's name?",
-    type: 'text', field: 'tenantName', placeholder: 'e.g. Sarah Mitchell',
-    next: 'unit_number'
-  },
   unit_number: {
     id: 'unit_number', text: "What is the unit number?",
     type: 'text', field: 'unitNumber', placeholder: 'e.g. 204  or  Building C, Unit 8',
@@ -1125,9 +1120,9 @@ const FLOW = {
     id: 'entry_permission', text: "Can the vendor enter the unit without the tenant present?",
     type: 'choice', field: 'entryPermission',
     choices: [
-      { letter:'A', text:'Yes — vendor can enter without tenant home', value:'yes - can enter without tenant', next:'pets' },
+      { letter:'A', text:'Yes — vendor can enter without tenant home', value:'yes - can enter without tenant', next:'photos' },
       { letter:'B', text:'No — tenant must be home for the visit',    value:'no - tenant must be home',       next:'entry_times' },
-      { letter:'C', text:'Unknown — need to check with tenant',       value:'unknown',                        next:'pets' }
+      { letter:'C', text:'Unknown — need to check with tenant',       value:'unknown',                        next:'photos' }
     ]
   },
 
@@ -1135,17 +1130,7 @@ const FLOW = {
     id: 'entry_times', text: "What days and times is the tenant available?",
     type: 'text', field: 'entryTimes',
     placeholder: "e.g. Weekdays after 4pm, Saturday mornings, will call to schedule…",
-    next: 'pets'
-  },
-
-  pets: {
-    id: 'pets', text: "Are there any pets in the unit?",
-    type: 'choice', field: 'pets',
-    choices: [
-      { letter:'A', text:'No pets',                                                  value:'no pets',                    next:'photos' },
-      { letter:'B', text:'Yes — they will be secured when vendor arrives',           value:'yes - will be secured',      next:'photos' },
-      { letter:'C', text:'Yes — unsure if they can be secured (need to coordinate)', value:'yes - coordination needed',  next:'photos' }
-    ]
+    next: 'photos'
   },
 
   photos: {
@@ -1306,7 +1291,6 @@ function getDispatchStatus() {
       ctx.applDisposalResolvedAction)                             return 'NO DISPATCH — Resolved without vendor';
   if (ctx.applDisposalSuggestAction)                              return 'HOLD — Awaiting tenant to try reset button';
   if (ctx.entryPermission === 'unknown')                          return 'HOLD — Need entry confirmation from tenant';
-  if (ctx.pets === 'yes - coordination needed')                   return 'HOLD — Need pet coordination with tenant';
   if (ctx.photos === 'no - will request' && photosRequired())    return 'HOLD — Awaiting photos from tenant';
   if (warrantyFlag)                                               return 'HOLD — Review warranty flag before dispatching';
   return 'READY TO DISPATCH';
@@ -1325,14 +1309,12 @@ function photosRequired() {
 function needsSMS() {
   if (ctx.applDisposalSuggestAction === 'send text') return true;
   if (ctx.entryPermission === 'unknown') return true;
-  if (ctx.pets === 'yes - coordination needed') return true;
   if (ctx.photos === 'no - will request' && photosRequired()) return true;
   return false;
 }
 
 function buildSMS() {
-  const firstName = (ctx.tenantName || '').split(' ')[0] || 'there';
-  const lines = [`Hi ${firstName}, this is Turman Co Maintenance regarding your work order for Unit ${ctx.unitNumber || '[unit]'}.`];
+  const lines = [`Hi, this is Turman Co Maintenance regarding your work order for Unit ${ctx.unitNumber || '[unit]'}.`];
   if (ctx.applDisposalSuggestAction === 'send text') {
     lines.push(`Before we schedule a technician for the garbage disposal, could you try this quick fix: look under the sink for the disposal unit and press the small red reset button on the bottom firmly. If that gets it working, no service visit needed! Please let us know.`);
   }
@@ -1341,9 +1323,6 @@ function buildSMS() {
   }
   if (ctx.entryPermission === 'unknown') {
     lines.push(`Will you need to be home when our vendor visits, or can they enter using our key on file?`);
-  }
-  if (ctx.pets === 'yes - coordination needed') {
-    lines.push(`Please also confirm that you'll be able to secure your pets during the vendor visit.`);
   }
   lines.push(`Please reply at your earliest convenience. Thank you! – Turman Co Maintenance`);
   return lines.join('\n\n');
@@ -1439,7 +1418,6 @@ function buildWODescription() {
   lines.push(`WORK ORDER${woNum ? ' #' + woNum : ''} — ${today}`);
   lines.push(`UNIT: ${ctx.unitNumber || 'Not provided'}`);
   lines.push(`PROPERTY: ${ctx.propertyName || 'Not provided'}`);
-  lines.push(`TENANT: ${ctx.tenantName || 'Not provided'}`);
   lines.push('');
   lines.push(`ISSUE: ${buildIssueSummary()}`);
   const details = buildIssueDetails();
@@ -1450,7 +1428,6 @@ function buildWODescription() {
   lines.push('');
   lines.push(`ENTRY: ${ctx.entryPermission || 'Not confirmed'}`);
   if (ctx.entryTimes) lines.push(`AVAILABILITY: ${ctx.entryTimes}`);
-  lines.push(`PETS: ${ctx.pets || 'Not confirmed'}`);
   if (ctx.photos === 'yes') lines.push('PHOTOS: Available — confirm before scheduling');
   if (warrantyFlag) { lines.push(''); lines.push(`⚠️ WARRANTY FLAG — Do not dispatch until warranty has been reviewed.`); }
   if (emergencyMsg) { lines.push(''); lines.push(`🚨 EMERGENCY: ${emergencyMsg}`); }
@@ -1482,7 +1459,6 @@ function buildAptlyComment() {
   lines.push(`LOGISTICS`);
   lines.push(`Entry: ${ctx.entryPermission || 'Not confirmed'}`);
   if (ctx.entryTimes) lines.push(`Availability: ${ctx.entryTimes}`);
-  lines.push(`Pets: ${ctx.pets || 'Not confirmed'}`);
   lines.push(`Photos: ${ctx.photos || 'Not confirmed'}`);
   const advisories = [];
   if (ctx.plumbToiletReported === 'informational') advisories.push('Tenant informed of flapper fix option for running toilet');
