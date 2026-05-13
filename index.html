@@ -625,7 +625,7 @@ const FLOW = {
 
   hvac_gas_off: {
     id: 'hvac_gas_off',
-    text: "Gas service is off or unpaid — we cannot dispatch a heating vendor. This is a utility issue.\n\nClose this work order and inform the tenant to contact their gas provider.",
+    text: "Gas service is off or unpaid — we cannot dispatch a repair vendor. This is a utility issue.\n\nClose this work order and inform the tenant to contact their gas provider.",
     type: 'choice', field: 'hvacGasOffAction',
     choices: [
       { letter:'A', text:'Got it — closing WO, advising tenant to contact gas provider', value:'close', next:'DONE' }
@@ -860,15 +860,7 @@ const FLOW = {
 
   appl_fridge_defrost: {
     id: 'appl_fridge_defrost',
-    text: "If the freezer works but the fridge doesn't, the unit needs to be defrosted — there is only one compressor. Instruct the tenant to:
-
-1. Put towels down on the floor
-2. Move food to a cooler with ice
-3. Turn the refrigerator OFF for 24 hours
-4. Turn it back on and wait another 24 hours
-5. If still not cooling after 48 hours, submit a new work order
-
-Close this work order now. Do NOT leave it on hold.",
+    text: "If the freezer works but the fridge doesn't, the unit needs to be defrosted — there is only one compressor. Instruct the tenant to:\n\n1. Put towels down on the floor\n2. Move food to a cooler with ice\n3. Turn the refrigerator completely OFF for 24 hours\n4. Turn it back on and wait another 24 hours\n5. If still not cooling after 48 hours, submit a new work order\n\nClose this work order now. Do NOT leave it on hold.",
     type: 'choice', field: 'applFridgeDefrostAction',
     choices: [
       { letter:'A', text:'Got it — closing WO and sending defrost instructions to tenant', value:'close and instruct', next:'DONE' }
@@ -901,9 +893,7 @@ Close this work order now. Do NOT leave it on hold.",
 
   appl_stove_gas_off: {
     id: 'appl_stove_gas_off',
-    text: "If the tenant's gas service is off or unpaid, we cannot dispatch. This is a utility issue.
-
-Close this work order and inform the tenant to contact their gas provider.",
+    text: "If the tenant's gas service is off or unpaid, we cannot dispatch a heating vendor. This is a utility issue.\n\nClose this work order and inform the tenant to contact their gas provider.",
     type: 'choice', field: 'applStoveGasOffAction',
     choices: [
       { letter:'A', text:'Got it — closing WO, advising tenant to contact gas provider', value:'close', next:'DONE' }
@@ -917,7 +907,7 @@ Close this work order and inform the tenant to contact their gas provider.",
     choices: [
       { letter:'A', text:'Yes — no tripped breaker found', value:'checked no trip', next:'appl_ownership' },
       { letter:'B', text:'Yes — found and reset a tripped breaker, now working', value:'reset fixed it', next:'appl_stove_resolved' },
-      { letter:'C', text:'No — haven't checked yet', value:'not checked', next:'appl_ownership',
+      { letter:'C', text:"No — haven't checked yet", value:'not checked', next:'appl_ownership',
         note:"Ask tenant to check their breaker panel for a tripped breaker before dispatching. Electric stoves need a 240V dedicated circuit.", noteType:'info' }
     ]
   },
