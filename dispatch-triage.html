@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turman Co — Dispatch Triage</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --border: #e8e5de;
+  --border-strong: #ccc9c0;
+  --text: #1a1917;
+  --text-muted: #706e68;
+  --text-faint: #a8a49c;
+  --accent: #1a5c3a;
+  --accent-light: #e8f2ec;
+  --accent-mid: #2d7a52;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --warn-border: #d97706;
+  --stop: #991b1b;
+  --stop-bg: #fee2e2;
+  --stop-border: #dc2626;
+  --go: #14532d;
+  --go-bg: #dcfce7;
+  --go-border: #16a34a;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -.5px;
+}
+.logo-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.2px;
+}
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wo-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+}
+.wo-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.wo-input {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 80px;
+}
+.wo-input::placeholder { color: var(--text-faint); }
+.btn-new {
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-new:hover { background: var(--accent-mid); }
+
+/* Main layout */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 20px 120px;
+}
+
+/* Source selector */
+.source-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.source-btn {
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s;
+  font-weight: 400;
+}
+.source-btn:hover { border-color: var(--accent); color: var(--accent); }
+.source-btn.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Welcome state */
+.welcome {
+  text-align: center;
+  padding: 40px 20px;
+  display: none;
+}
+.welcome.show { display: block; }
+.welcome h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -.3px;
+}
+.welcome p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 480px;
+  margin: 0 auto 28px;
+}
+.starter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.starter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s, box-shadow .15s;
+}
+.starter-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.starter-icon {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.starter-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.starter-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Chat messages */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.msg {
+  display: flex;
+  gap: 10px;
+  animation: msgIn .2s ease;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg.user { flex-direction: row-reverse; }
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.avatar.ai {
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--mono);
+}
+.avatar.user-av {
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.bubble {
+  max-width: 86%;
+  padding: 12px 15px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.msg.ai .bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top-left-radius: 4px;
+}
+.msg.user .bubble {
+  background: var(--accent);
+  color: #fff;
+  border-top-right-radius: 4px;
+}
+
+/* Verdict card */
+.verdict {
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-top: 6px;
+  border-left: 4px solid;
+}
+.verdict.go    { background: var(--go-bg);   border-color: var(--go-border);   }
+.verdict.flag  { background: var(--warn-bg);  border-color: var(--warn-border); }
+.verdict.stop  { background: var(--stop-bg);  border-color: var(--stop-border); }
+.verdict-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.verdict.go   .verdict-label { color: var(--go);   }
+.verdict.flag .verdict-label { color: var(--warn);  }
+.verdict.stop .verdict-label { color: var(--stop);  }
+.verdict-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.verdict-body {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.verdict-body ul {
+  margin-top: 6px;
+  padding-left: 16px;
+}
+.verdict-body li { margin-bottom: 3px; }
+
+/* Thinking indicator */
+.thinking {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.thinking-dots {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-top-left-radius: 4px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+@keyframes pulse {
+  0%,80%,100% { opacity: .3; transform: scale(.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Input bar */
+.input-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 14px 20px 20px;
+}
+.input-inner {
+  max-width: 780px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.textarea-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.textarea-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+#msg-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  max-height: 140px;
+  line-height: 1.5;
+  min-height: 22px;
+}
+#msg-input::placeholder { color: var(--text-faint); }
+.btn-send {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, opacity .15s;
+}
+.btn-send:hover { background: var(--accent-mid); }
+.btn-send:disabled { opacity: .4; cursor: not-allowed; }
+.btn-send svg { width: 16px; height: 16px; fill: #fff; }
+.input-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* Prose formatting inside bubbles */
+.bubble strong { font-weight: 600; }
+.bubble ul { padding-left: 18px; margin: 6px 0; }
+.bubble li { margin-bottom: 3px; }
+.bubble p + p { margin-top: 8px; }
+.bubble .tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+.bubble .tag.go   { background: var(--go-bg);   color: var(--go);   }
+.bubble .tag.flag { background: var(--warn-bg);  color: var(--warn); }
+.bubble .tag.stop { background: var(--stop-bg);  color: var(--stop); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark">TC</div>
+    <div>
+      <div class="logo-text">Dispatch Triage</div>
+      <div class="logo-sub">Turman Co</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="wo-field">
+      <span class="wo-label">WO #</span>
+      <input class="wo-input" id="wo-number" type="text" placeholder="e.g. 23419" />
+    </div>
+    <button class="btn-new" onclick="newSession()">+ New review</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="source-bar">
+    <span style="font-size:12px;color:var(--text-muted);align-self:center;margin-right:2px">Source:</span>
+    <button class="source-btn active" onclick="setSource(this,'phone')">📞 Phone call</button>
+    <button class="source-btn" onclick="setSource(this,'aptly')">Aptly AI agent</button>
+    <button class="source-btn" onclick="setSource(this,'rentmanager')">Rent Manager / TWA</button>
+    <button class="source-btn" onclick="setSource(this,'other')">Other</button>
+  </div>
+
+  <div class="welcome show" id="welcome">
+    <h2>Ready to review a work order</h2>
+    <p>Tell me what came in — a phone summary, the tenant's complaint, or paste the full ticket. I'll ask what I need and give you a go/no-go recommendation.</p>
+    <div class="starter-grid">
+      <div class="starter-card" onclick="useStarter('Tenant called saying her HVAC isn\'t working. Unit 204, Sarah Mitchell.')">
+        <div class="starter-icon">🌡️</div>
+        <div class="starter-title">HVAC complaint</div>
+        <div class="starter-desc">Tenant says heat or AC isn't working</div>
+      </div>
+      <div class="starter-card" onclick="useStarter('Tenant says there\'s a leak under the kitchen sink. No photos yet. Unit 312.')">
+        <div class="starter-icon">💧</div>
+        <div class="starter-title">Leak report</div>
+        <div class="starter-desc">Sink, ceiling, or roof water issue</div>
+      </div>
+      <div class="starter-card" onclick="useStarter('Garbage disposal stopped working. Unit 108, put in through tenant web access.')">
+        <div class="starter-icon">🔧</div>
+        <div class="starter-title">Appliance issue</div>
+        <div class="starter-desc">Disposal, fridge, stove, dishwasher</div>
+      </div>
+      <div class="starter-card" onclick="useStarter('Tenant says there\'s a hole in the roof. Roof was replaced 6 months ago. Unit 415.')">
+        <div class="starter-icon">🏠</div>
+        <div class="starter-title">Roof complaint</div>
+        <div class="starter-desc">After recent install or repair</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat" id="chat"></div>
+
+</div>
+
+<div class="input-bar">
+  <div class="input-inner">
+    <div class="textarea-wrap">
+      <textarea id="msg-input" rows="1" placeholder="Describe the work order or paste the ticket…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="btn-send" id="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>
+      </button>
+    </div>
+    <div class="input-hint">Shift+Enter for new line &nbsp;·&nbsp; Enter to send</div>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are a property management dispatch triage assistant for Turman Co, a property management company. Your job is to help a dispatcher named Stephanie evaluate incoming work orders before sending them to vendors.
+
+Your role is conversational and Socratic — you ask smart questions, flag issues, and guide Stephanie to the right decision. You are NOT just a checklist; you think through each situation like an experienced property manager would.
+
+CORE PRINCIPLES:
+1. Always ask about history first — has this happened before? Was a vendor sent recently?
+2. Flag warranty situations immediately — any recent repair (< 90 days) or install means the original vendor should be called first, not a new dispatch
+3. Request photos before dispatching for: leaks, ceiling damage, roof complaints, mold, flooring, appliances, exterior issues
+4. Suggest troubleshooting before dispatch: GFCI reset, breaker, thermostat batteries, disposal reset button, pilot light, drain hair clogs, smoke detector battery
+5. Question the tenant's story when it doesn't add up — new roof + "hole in roof" = likely interior ceiling leak, not a roofing issue
+6. Check if it's actually landlord responsibility vs tenant/utility issue
+
+WORK ORDER SOURCES Stephanie uses:
+- Phone calls (she summarizes what the tenant said)
+- Aptly AI agent (automated intake, may have structured data)
+- Rent Manager / Tenant Web Access (formal written tickets from tenants)
+
+YOUR CONVERSATION STYLE:
+- Be direct and efficient — Stephanie is busy
+- Ask ONE or TWO questions at a time, not a wall of questions
+- When you have enough info, give a clear verdict
+- Always explain your reasoning so Stephanie learns
+- Use these verdict labels when giving a recommendation:
+  ✅ GO — Dispatch with confidence
+  ⚠️ FLAG — Proceed with caution or gather more info first
+  🛑 STOP — Do not dispatch yet, here's why
+
+VERDICT FORMAT:
+When you have enough information, structure your verdict clearly:
+- Start with the verdict label (GO / FLAG / STOP)
+- State the recommended action in one sentence
+- List 2-4 bullet reasons
+- If FLAG or STOP, tell Stephanie exactly what to do next
+- End by asking if she has questions or wants to override
+
+Remember: Your goal is to save Turman Co money on unnecessary dispatches while training Stephanie to think like an experienced property manager.`;
+
+let conversationHistory = [];
+let currentSource = 'phone';
+let isThinking = false;
+
+function setSource(btn, source) {
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSource = source;
+  const input = document.getElementById('msg-input');
+  const placeholders = {
+    phone: 'Summarize what the tenant said on the call…',
+    aptly: 'Paste the Aptly AI agent summary…',
+    rentmanager: 'Paste the Rent Manager / TWA ticket…',
+    other: 'Describe the work order…'
+  };
+  input.placeholder = placeholders[source];
+}
+
+function useStarter(text) {
+  document.getElementById('msg-input').value = text;
+  autoResize(document.getElementById('msg-input'));
+  document.getElementById('msg-input').focus();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function addMessage(role, content, isHTML) {
+  const chat = document.getElementById('chat');
+  const welcome = document.getElementById('welcome');
+  welcome.classList.remove('show');
+
+  const msg = document.createElement('div');
+  msg.className = `msg ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = `avatar ${role === 'ai' ? 'ai' : 'user-av'}`;
+  avatar.textContent = role === 'ai' ? 'AI' : 'S';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if (isHTML) {
+    bubble.innerHTML = content;
+  } else {
+    bubble.innerHTML = formatMessage(content);
+  }
+
+  msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  chat.appendChild(msg);
+  scrollToBottom();
+  return bubble;
+}
+
+function formatMessage(text) {
+  // Convert markdown-style formatting to HTML
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/✅\s*(GO|APPROVED)/gi, '<span class="tag go">GO</span>')
+    .replace(/⚠️\s*(FLAG|CAUTION)/gi, '<span class="tag flag">FLAG</span>')
+    .replace(/🛑\s*(STOP|BLOCK)/gi, '<span class="tag stop">STOP</span>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n- /g, '</p><ul><li>')
+    .replace(/\n• /g, '</p><ul><li>')
+    .replace(/^- /gm, '<li>')
+    .replace(/^• /gm, '<li>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(.*)$/m, '<p>$1</p>');
+}
+
+function showThinking() {
+  const chat = document.getElementById('chat');
+  const msg = document.createElement('div');
+  msg.className = 'msg ai thinking-msg';
+  msg.id = 'thinking-indicator';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar ai';
+  avatar.textContent = 'AI';
+
+  const dots = document.createElement('div');
+  dots.className = 'thinking-dots';
+  dots.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+  msg.appendChild(avatar);
+  msg.appendChild(dots);
+  chat.appendChild(msg);
+  scrollToBottom();
+}
+
+function removeThinking() {
+  const el = document.getElementById('thinking-indicator');
+  if (el) el.remove();
+}
+
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+async function sendMessage() {
+  if (isThinking) return;
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const woNum = document.getElementById('wo-number').value.trim();
+  const sourceLabels = {
+    phone: 'Phone call',
+    aptly: 'Aptly AI agent',
+    rentmanager: 'Rent Manager / TWA',
+    other: 'Other'
+  };
+
+  // Build context prefix for first message
+  let userContent = text;
+  if (conversationHistory.length === 0) {
+    const context = [];
+    if (woNum) context.push(`Work Order #${woNum}`);
+    context.push(`Source: ${sourceLabels[currentSource]}`);
+    userContent = `[${context.join(' | ')}]\n\n${text}`;
+  }
+
+  // Add to UI
+  addMessage('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add to history
+  conversationHistory.push({ role: 'user', content: userContent });
+
+  // Show thinking
+  isThinking = true;
+  document.getElementById('send-btn').disabled = true;
+  showThinking();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+
+    const data = await response.json();
+    removeThinking();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const reply = data.content.find(b => b.type === 'text')?.text || '';
+    conversationHistory.push({ role: 'assistant', content: reply });
+    addMessage('ai', reply);
+
+  } catch (err) {
+    removeThinking();
+    addMessage('ai', `Something went wrong: ${err.message}. Please try again.`);
+  } finally {
+    isThinking = false;
+    document.getElementById('send-btn').disabled = false;
+    input.focus();
+  }
+}
+
+function newSession() {
+  conversationHistory = [];
+  document.getElementById('chat').innerHTML = '';
+  document.getElementById('welcome').classList.add('show');
+  document.getElementById('wo-number').value = '';
+  document.getElementById('msg-input').value = '';
+  document.getElementById('msg-input').style.height = 'auto';
+  document.getElementById('msg-input').focus();
+}
+
+// Auto-focus input on load
+window.addEventListener('load', () => {
+  document.getElementById('msg-input').focus();
+});
+</script>
+</body>
+</html>
