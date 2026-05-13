@@ -1256,7 +1256,7 @@ function addAIBubble(text) {
   const av  = document.createElement('div'); av.className = 'avatar ai'; av.textContent = 'AI';
   const col = document.createElement('div'); col.className = 'msg-col';
   const bub = document.createElement('div'); bub.className = 'bubble';
-  bub.innerHTML = escH(text).replace(/\n/g, '<br>');
+  bub.innerHTML = text.replace(/\n/g, '<br>');
   col.appendChild(bub); msg.appendChild(av); msg.appendChild(col);
   chat.appendChild(msg); scrollBottom(); return col;
 }
