@@ -361,7 +361,7 @@ const FLOW = {
     type: 'choice', field: 'aptlyChecked',
     choices: [
       { letter:'A', text:"Yes — checked, no other open WOs and no recent repairs on this issue",
-        value:'clear', next:'unit_number' },
+        value:'clear', next:'issue_category' },
       { letter:'B', text:"Yes — found other open work orders or recent work on this issue",
         value:'findings', next:'aptly_findings' },
       { letter:'C', text:"Not yet — I need to go check",
@@ -375,7 +375,7 @@ const FLOW = {
     text: "Take a moment to check the Aptly card now. Look for:\n• Any other open work orders for this unit\n• Same issue repaired within the last 90 days (warranty!)\n• New appliance or system installed within the last year\n\nCome back when you've reviewed it:",
     type: 'choice', field: 'aptlyRechecked',
     choices: [
-      { letter:'A', text:"All clear — no open WOs, no recent repairs", value:'clear', next:'unit_number' },
+      { letter:'A', text:"All clear — no open WOs, no recent repairs", value:'clear', next:'issue_category' },
       { letter:'B', text:"Found something relevant",                    value:'findings', next:'aptly_findings' }
     ]
   },
@@ -392,7 +392,7 @@ const FLOW = {
         value:'new install within 1 year', next:'warranty_decision',
         flag:'warranty', note:"⚠️ WARRANTY FLAG — New install within 1 year may still be under manufacturer or contractor warranty. Contact original installer first.", noteType:'warn' },
       { letter:'C', text:"There are other open work orders for different issues (unrelated)",
-        value:'other open WOs unrelated', next:'unit_number' },
+        value:'other open WOs unrelated', next:'issue_category' },
       { letter:'D', text:"Other notes or vendor history worth knowing — describe below",
         value:'other', next:'aptly_note' }
     ]
@@ -404,7 +404,7 @@ const FLOW = {
     type: 'choice', field: 'warrantyDecision',
     choices: [
       { letter:'A', text:"I'll note the warranty flag and continue gathering info",
-        value:'continue', next:'unit_number' },
+        value:'continue', next:'issue_category' },
       { letter:'B', text:"I'm stopping here — I'll call the original vendor",
         value:'stop', next:'warranty_stop' }
     ]
@@ -423,20 +423,11 @@ const FLOW = {
     id: 'aptly_note',
     text: "Briefly describe what you found (this will be included in the Aptly card comment):",
     type: 'text', field: 'aptlyNote', placeholder:'e.g. Prior vendor noted slow drain in 2023, tenant has had this before…',
-    next: 'unit_number'
+    next: 'issue_category'
   },
 
   // ── STEP 2: Basic info ─────────────────────────────────────────
-  unit_number: {
-    id: 'unit_number', text: "What is the unit number?",
-    type: 'text', field: 'unitNumber', placeholder: 'e.g. 204  or  Building C, Unit 8',
-    next: 'property_name'
-  },
-  property_name: {
-    id: 'property_name', text: "Which property?",
-    type: 'text', field: 'propertyName', placeholder: 'e.g. Cedar Creek, Maple Ridge…',
-    next: 'rm_complaint'  // will route based on source in getNext()
-  },
+
 
   // ── RM/TWA only: capture tenant's original complaint ───────────
   rm_complaint: {
@@ -1152,7 +1143,12 @@ function getNextId(qId, choiceObj) {
   // Aptly source: after issue_category, go to aptly_summary then entry_permission
   if (qId === 'issue_category' && source === 'aptly') return 'aptly_summary';
   // Skip rm_complaint for non-RM sources
-  if (qId === 'property_name') return source === 'rm' ? 'rm_complaint' : 'issue_category';
+  // rm_complaint is now reached via aptly_check chain routing to issue_category
+  // For RM source, show rm_complaint before issue_category
+  if (qId === 'aptly_check' || qId === 'aptly_remind' || qId === 'aptly_findings' || qId === 'warranty_decision' || qId === 'aptly_note') {
+    const base = choiceObj ? choiceObj.next : null;
+    if (base === 'issue_category' && source === 'rm') return 'rm_complaint';
+  }
   const q = FLOW[qId];
   if (q.type === 'text') return q.next;
   return choiceObj ? choiceObj.next : null;
@@ -1314,7 +1310,7 @@ function needsSMS() {
 }
 
 function buildSMS() {
-  const lines = [`Hi, this is Turman Co Maintenance regarding your work order for Unit ${ctx.unitNumber || '[unit]'}.`];
+  const lines = [`Hi, this is Turman Co Maintenance. We are following up on your recent work order.`];
   if (ctx.applDisposalSuggestAction === 'send text') {
     lines.push(`Before we schedule a technician for the garbage disposal, could you try this quick fix: look under the sink for the disposal unit and press the small red reset button on the bottom firmly. If that gets it working, no service visit needed! Please let us know.`);
   }
@@ -1416,8 +1412,6 @@ function buildWODescription() {
   const woNum = document.getElementById('wo-number').value.trim();
   const lines = [];
   lines.push(`WORK ORDER${woNum ? ' #' + woNum : ''} — ${today}`);
-  lines.push(`UNIT: ${ctx.unitNumber || 'Not provided'}`);
-  lines.push(`PROPERTY: ${ctx.propertyName || 'Not provided'}`);
   lines.push('');
   lines.push(`ISSUE: ${buildIssueSummary()}`);
   const details = buildIssueDetails();
