@@ -289,29 +289,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
       <h2>Ready to triage a work order</h2>
       <p>Select the source above, enter the WO# if you have it, then press Start. I'll walk you through everything one question at a time — click the lettered buttons to answer quickly, or type and press Enter for open-ended questions.</p>
       <button class="btn-start" onclick="startTriage()">▶ Start Triage</button>
-      <p style="font-size:12px;color:var(--text-faint);margin-top:-12px">— or jump to a common scenario —</p>
-      <div class="starter-grid">
-        <div class="starter-card" onclick="quickStart('aptly','Tenant reported AC not cooling — Aptly AI agent submitted the work order.')">
-          <div class="starter-icon">🌡️</div>
-          <div class="starter-title">HVAC (via AI Agent)</div>
-          <div class="starter-desc">AC or heat issue from Aptly</div>
-        </div>
-        <div class="starter-card" onclick="quickStart('phone','Tenant called — leak under the kitchen sink, Unit 204.')">
-          <div class="starter-icon">💧</div>
-          <div class="starter-title">Leak (phone call)</div>
-          <div class="starter-desc">Sink, ceiling, or water issue</div>
-        </div>
-        <div class="starter-card" onclick="quickStart('rm','Tenant submitted ticket: disposal not working.')">
-          <div class="starter-icon">🔧</div>
-          <div class="starter-title">Appliance (TWA ticket)</div>
-          <div class="starter-desc">Disposal, fridge, stove, etc.</div>
-        </div>
-        <div class="starter-card" onclick="quickStart('phone','Tenant called — outlets in the bathroom not working, Unit 312.')">
-          <div class="starter-icon">⚡</div>
-          <div class="starter-title">Electrical (phone call)</div>
-          <div class="starter-desc">Outlets, breaker, fixtures</div>
-        </div>
-      </div>
+
     </div>
   </div>
   <div class="chat" id="chat"></div>
@@ -463,7 +441,7 @@ const FLOW = {
     text: "The Aptly AI agent already walked the tenant through the diagnostic questions. Briefly summarize what the agent captured about this issue:",
     type: 'text', field: 'aptlySummary',
     placeholder: 'e.g. Tenant says AC running but not cooling. Agent confirmed filter changed 3 weeks ago, thermostat batteries fine, set to 72°F, indoor temp is 84°F…',
-    next: 'entry_permission'
+    next: 'photos'
   },
 
   // ════════════════════════════════════════════════════════════════
@@ -597,10 +575,10 @@ const FLOW = {
     id: 'plumb_duration', text: "How long has this plumbing issue been going on?",
     type: 'choice', field: 'issueDuration',
     choices: [
-      { letter:'A', text:'Just noticed today',   value:'just today',     next:'entry_permission' },
-      { letter:'B', text:'A few days (2–4)',     value:'a few days',     next:'entry_permission' },
-      { letter:'C', text:'About a week',         value:'about a week',   next:'entry_permission' },
-      { letter:'D', text:'More than a week',     value:'more than a week', next:'entry_permission' }
+      { letter:'A', text:'Just noticed today',   value:'just today',     next:'photos' },
+      { letter:'B', text:'A few days (2–4)',     value:'a few days',     next:'photos' },
+      { letter:'C', text:'About a week',         value:'about a week',   next:'photos' },
+      { letter:'D', text:'More than a week',     value:'more than a week', next:'photos' }
     ]
   },
 
@@ -612,11 +590,45 @@ const FLOW = {
     type: 'choice', field: 'hvacType',
     choices: [
       { letter:'A', text:'No cooling — AC running but not cooling',      value:'no cooling',              next:'hvac_temp' },
-      { letter:'B', text:'No heating — heat running but not heating',    value:'no heating',              next:'hvac_temp' },
+      { letter:'B', text:'No heating — heat running but not heating',    value:'no heating',              next:'hvac_heat_fuel' },
       { letter:'C', text:'System not turning on at all',                 value:'not turning on',          next:'hvac_thermostat' },
       { letter:'D', text:'System runs but doesn\'t reach set temp',      value:'not reaching set temp',   next:'hvac_temp' },
       { letter:'E', text:'Making unusual noise',                         value:'unusual noise',           next:'hvac_noise' },
       { letter:'F', text:'Leaking water from the unit',                  value:'leaking water',           next:'hvac_duration' }
+    ]
+  },
+
+
+  hvac_heat_fuel: {
+    id: 'hvac_heat_fuel',
+    text: "Is the heating system gas or electric?",
+    type: 'choice', field: 'hvacHeatFuel',
+    choices: [
+      { letter:'A', text:'Gas heat',      value:'gas',     next:'hvac_gas_service' },
+      { letter:'B', text:'Electric heat', value:'electric', next:'hvac_temp' },
+      { letter:'C', text:'Unknown',       value:'unknown',  next:'hvac_temp' }
+    ]
+  },
+
+  hvac_gas_service: {
+    id: 'hvac_gas_service',
+    text: "Has the tenant confirmed their gas service is active and paid?",
+    type: 'choice', field: 'hvacGasService',
+    choices: [
+      { letter:'A', text:'Yes — gas is on and paid',
+        value:'yes gas on', next:'hvac_temp' },
+      { letter:'B', text:'No / unsure — gas may be off or unpaid',
+        value:'gas possibly off', next:'hvac_gas_off',
+        note:"If gas is off or unpaid, this is a utility issue — not a landlord repair. Tenant must contact their gas provider.", noteType:'warn' }
+    ]
+  },
+
+  hvac_gas_off: {
+    id: 'hvac_gas_off',
+    text: "Gas service is off or unpaid — we cannot dispatch a heating vendor. This is a utility issue.\n\nClose this work order and inform the tenant to contact their gas provider.",
+    type: 'choice', field: 'hvacGasOffAction',
+    choices: [
+      { letter:'A', text:'Got it — closing WO, advising tenant to contact gas provider', value:'close', next:'DONE' }
     ]
   },
 
@@ -695,10 +707,10 @@ const FLOW = {
     id: 'hvac_duration', text: "How long has the HVAC problem been going on?",
     type: 'choice', field: 'issueDuration',
     choices: [
-      { letter:'A', text:'Just noticed today',  value:'just today',      next:'entry_permission' },
-      { letter:'B', text:'A few days',          value:'a few days',      next:'entry_permission' },
-      { letter:'C', text:'About a week',        value:'about a week',    next:'entry_permission' },
-      { letter:'D', text:'More than a week',    value:'more than a week', next:'entry_permission' }
+      { letter:'A', text:'Just noticed today',  value:'just today',      next:'photos' },
+      { letter:'B', text:'A few days',          value:'a few days',      next:'photos' },
+      { letter:'C', text:'About a week',        value:'about a week',    next:'photos' },
+      { letter:'D', text:'More than a week',    value:'more than a week', next:'photos' }
     ]
   },
 
@@ -806,10 +818,10 @@ const FLOW = {
     id: 'elec_duration', text: "How long has this electrical issue been going on?",
     type: 'choice', field: 'issueDuration',
     choices: [
-      { letter:'A', text:'Just noticed today',  value:'just today',       next:'entry_permission' },
-      { letter:'B', text:'A few days',          value:'a few days',       next:'entry_permission' },
-      { letter:'C', text:'About a week',        value:'about a week',     next:'entry_permission' },
-      { letter:'D', text:'More than a week',    value:'more than a week', next:'entry_permission' }
+      { letter:'A', text:'Just noticed today',  value:'just today',       next:'photos' },
+      { letter:'B', text:'A few days',          value:'a few days',       next:'photos' },
+      { letter:'C', text:'About a week',        value:'about a week',     next:'photos' },
+      { letter:'D', text:'More than a week',    value:'more than a week', next:'photos' }
     ]
   },
 
@@ -820,14 +832,102 @@ const FLOW = {
     id: 'appl_which', text: "Which appliance?",
     type: 'choice', field: 'applWhich',
     choices: [
-      { letter:'A', text:'Refrigerator',      value:'refrigerator',      next:'appl_ownership' },
-      { letter:'B', text:'Stove or oven',     value:'stove/oven',        next:'appl_ownership' },
+      { letter:'A', text:'Refrigerator',      value:'refrigerator',      next:'appl_fridge_freezer' },
+      { letter:'B', text:'Stove or oven',     value:'stove/oven',        next:'appl_stove_fuel' },
       { letter:'C', text:'Dishwasher',        value:'dishwasher',        next:'appl_ownership' },
       { letter:'D', text:'Garbage disposal',  value:'garbage disposal',  next:'appl_disposal' },
       { letter:'E', text:'Washing machine',   value:'washing machine',   next:'appl_ownership' },
       { letter:'F', text:'Dryer',             value:'dryer',             next:'appl_ownership' },
       { letter:'G', text:'Microwave',         value:'microwave',         next:'appl_ownership' },
       { letter:'H', text:'Water heater',      value:'water heater',      next:'appl_ownership' }
+    ]
+  },
+
+  appl_fridge_freezer: {
+    id: 'appl_fridge_freezer',
+    text: "Is the freezer working?",
+    type: 'choice', field: 'applFridgeFreezer',
+    choices: [
+      { letter:'A', text:'Freezer works fine — only the fridge/cooling section is not cold',
+        value:'freezer works fridge not', next:'appl_fridge_defrost',
+        note:"If the freezer works but fridge doesn't, there is only one compressor — the fridge section likely needs defrosting. Do not dispatch.", noteType:'info' },
+      { letter:'B', text:'Both freezer and fridge are not working',
+        value:'both not working', next:'appl_ownership' },
+      { letter:'C', text:'Other issue (leaking, noise, etc.)',
+        value:'other', next:'appl_ownership' }
+    ]
+  },
+
+  appl_fridge_defrost: {
+    id: 'appl_fridge_defrost',
+    text: "If the freezer works but the fridge doesn't, the unit needs to be defrosted — there is only one compressor. Instruct the tenant to:
+
+1. Put towels down on the floor
+2. Move food to a cooler with ice
+3. Turn the refrigerator OFF for 24 hours
+4. Turn it back on and wait another 24 hours
+5. If still not cooling after 48 hours, submit a new work order
+
+Close this work order now. Do NOT leave it on hold.",
+    type: 'choice', field: 'applFridgeDefrostAction',
+    choices: [
+      { letter:'A', text:'Got it — closing WO and sending defrost instructions to tenant', value:'close and instruct', next:'DONE' }
+    ]
+  },
+
+  appl_stove_fuel: {
+    id: 'appl_stove_fuel',
+    text: "Is the stove/oven gas or electric?",
+    type: 'choice', field: 'applStoveFuel',
+    choices: [
+      { letter:'A', text:'Gas',     value:'gas',     next:'appl_stove_gas_service' },
+      { letter:'B', text:'Electric', value:'electric', next:'appl_stove_breaker' },
+      { letter:'C', text:'Unknown', value:'unknown',  next:'appl_ownership' }
+    ]
+  },
+
+  appl_stove_gas_service: {
+    id: 'appl_stove_gas_service',
+    text: "Has the tenant confirmed their gas service is active and paid?",
+    type: 'choice', field: 'applStoveGasService',
+    choices: [
+      { letter:'A', text:'Yes — gas is on and paid',
+        value:'yes gas on', next:'appl_ownership' },
+      { letter:'B', text:'No / unsure — gas may be off or unpaid',
+        value:'gas possibly off', next:'appl_stove_gas_off',
+        note:"If gas is off or unpaid, this is a utility issue — not a landlord repair. Tenant must contact their gas provider.", noteType:'warn' }
+    ]
+  },
+
+  appl_stove_gas_off: {
+    id: 'appl_stove_gas_off',
+    text: "If the tenant's gas service is off or unpaid, we cannot dispatch. This is a utility issue.
+
+Close this work order and inform the tenant to contact their gas provider.",
+    type: 'choice', field: 'applStoveGasOffAction',
+    choices: [
+      { letter:'A', text:'Got it — closing WO, advising tenant to contact gas provider', value:'close', next:'DONE' }
+    ]
+  },
+
+  appl_stove_breaker: {
+    id: 'appl_stove_breaker',
+    text: "Electric stoves require a dedicated 240V breaker. Has the tenant checked their breaker panel for a tripped breaker?",
+    type: 'choice', field: 'applStoveBreaker',
+    choices: [
+      { letter:'A', text:'Yes — no tripped breaker found', value:'checked no trip', next:'appl_ownership' },
+      { letter:'B', text:'Yes — found and reset a tripped breaker, now working', value:'reset fixed it', next:'appl_stove_resolved' },
+      { letter:'C', text:'No — haven't checked yet', value:'not checked', next:'appl_ownership',
+        note:"Ask tenant to check their breaker panel for a tripped breaker before dispatching. Electric stoves need a 240V dedicated circuit.", noteType:'info' }
+    ]
+  },
+
+  appl_stove_resolved: {
+    id: 'appl_stove_resolved',
+    text: "Breaker reset resolved the stove issue — no dispatch needed.",
+    type: 'choice', field: 'applStoveResolvedAction',
+    choices: [
+      { letter:'A', text:'Got it — closing this WO', value:'close', next:'DONE' }
     ]
   },
 
@@ -867,10 +967,24 @@ const FLOW = {
     id: 'appl_ownership', text: "Is this appliance landlord-owned or tenant-owned?",
     type: 'choice', field: 'applOwnership',
     choices: [
-      { letter:'A', text:'Landlord-owned (included in the unit)',  value:'landlord-owned', next:'appl_warranty' },
+      { letter:'A', text:'Landlord-owned (included in the unit)',  value:'landlord-owned', next:'appl_age' },
       { letter:'B', text:'Tenant-owned (tenant brought it themselves)', value:'tenant-owned', next:'appl_tenant_owned',
         note:"Tenant-owned appliance — this is NOT the landlord's responsibility. The tenant must arrange their own repair.", noteType:'warn' },
-      { letter:'C', text:'Not sure — need to verify',              value:'unknown',        next:'appl_warranty' }
+      { letter:'C', text:'Not sure — need to verify',              value:'unknown',        next:'appl_age' }
+    ]
+  },
+
+  appl_age: {
+    id: 'appl_age',
+    text: "When was this appliance purchased or installed? (Appliances have a 1-year warranty.)",
+    type: 'choice', field: 'applAge',
+    choices: [
+      { letter:'A', text:'Within the last year (under warranty)',
+        value:'under 1 year', next:'appl_issue',
+        flag:'warranty', note:"⚠️ WARRANTY — Appliance is under 1-year warranty. Contact the original supplier or installer before dispatching a repair vendor.", noteType:'warn' },
+      { letter:'B', text:'1–3 years ago', value:'1-3 years', next:'appl_issue' },
+      { letter:'C', text:'More than 3 years ago', value:'3+ years', next:'appl_issue' },
+      { letter:'D', text:'Unknown', value:'unknown', next:'appl_issue' }
     ]
   },
 
@@ -881,18 +995,6 @@ const FLOW = {
     choices: [
       { letter:'A', text:'Yes — generate the comment', value:'document', next:'DONE' },
       { letter:'B', text:'No — I\'ll close the WO',    value:'close',    next:'DONE' }
-    ]
-  },
-
-  appl_warranty: {
-    id: 'appl_warranty', text: "Is there a home warranty on this unit?",
-    type: 'choice', field: 'applHomeWarranty',
-    choices: [
-      { letter:'A', text:'Yes — home warranty in place',
-        value:'yes', next:'appl_issue',
-        flag:'warranty', note:"⚠️ HOME WARRANTY — Call the warranty company to submit a claim. Do NOT dispatch a vendor directly.", noteType:'warn' },
-      { letter:'B', text:'No — no home warranty',   value:'no',      next:'appl_issue' },
-      { letter:'C', text:'Not sure — need to check', value:'unknown', next:'appl_issue' }
     ]
   },
 
@@ -907,10 +1009,10 @@ const FLOW = {
     id: 'appl_duration', text: "How long has the appliance had this problem?",
     type: 'choice', field: 'issueDuration',
     choices: [
-      { letter:'A', text:'Just noticed today',  value:'just today',       next:'entry_permission' },
-      { letter:'B', text:'A few days',          value:'a few days',       next:'entry_permission' },
-      { letter:'C', text:'About a week',        value:'about a week',     next:'entry_permission' },
-      { letter:'D', text:'More than a week',    value:'more than a week', next:'entry_permission' }
+      { letter:'A', text:'Just noticed today',  value:'just today',       next:'photos' },
+      { letter:'B', text:'A few days',          value:'a few days',       next:'photos' },
+      { letter:'C', text:'About a week',        value:'about a week',     next:'photos' },
+      { letter:'D', text:'More than a week',    value:'more than a week', next:'photos' }
     ]
   },
 
@@ -921,13 +1023,49 @@ const FLOW = {
     id: 'pest_type', text: "What type of pest?",
     type: 'choice', field: 'pestType',
     choices: [
-      { letter:'A', text:'Cockroaches',   value:'cockroaches', next:'pest_location' },
-      { letter:'B', text:'Bed bugs',      value:'bed bugs',    next:'pest_location',
+      { letter:'A', text:'Cockroaches',   value:'cockroaches', next:'pest_property_type' },
+      { letter:'B', text:'Bed bugs',      value:'bed bugs',    next:'pest_property_type',
         flag:'emergency', emergency:'BED BUGS — This requires immediate management involvement and a specialized treatment protocol. Do NOT dispatch a regular pest control vendor. Escalate to management NOW for proper handling.' },
-      { letter:'C', text:'Mice or rats',  value:'mice/rats',   next:'pest_location' },
-      { letter:'D', text:'Ants',          value:'ants',        next:'pest_location' },
-      { letter:'E', text:'Wasps or bees', value:'wasps/bees',  next:'pest_location' },
-      { letter:'F', text:'Other',         value:'other pests', next:'pest_location' }
+      { letter:'C', text:'Mice or rats',  value:'mice/rats',   next:'pest_property_type' },
+      { letter:'D', text:'Ants',          value:'ants',        next:'pest_property_type' },
+      { letter:'E', text:'Wasps or bees', value:'wasps/bees',  next:'pest_property_type' },
+      { letter:'F', text:'Other',         value:'other pests', next:'pest_property_type' }
+    ]
+  },
+
+
+  pest_property_type: {
+    id: 'pest_property_type',
+    text: "Is this a single-family home or a multi-family property (apartment/duplex)?",
+    type: 'choice', field: 'pestPropertyType',
+    choices: [
+      { letter:'A', text:'Single-family home',
+        value:'single-family', next:'pest_tenant_responsibility',
+        note:"Pest control in single-family homes is the tenant's responsibility. We do not spray chemicals in occupied homes.", noteType:'warn' },
+      { letter:'B', text:'Multi-family (apartment, duplex, etc.)',
+        value:'multi-family', next:'pest_entry_points' }
+    ]
+  },
+
+  pest_tenant_responsibility: {
+    id: 'pest_tenant_responsibility',
+    text: "Pest control is the tenant's responsibility in single-family homes. We do not dispatch exterminators or spray chemicals in occupied houses.\n\nWe CAN help by:\n• Patching holes and sealing entry points (submit a separate WO)\n• Advising on prevention\n\nHow would you like to handle this?",
+    type: 'choice', field: 'pestTenantAction',
+    choices: [
+      { letter:'A', text:'Close WO — inform tenant it is their responsibility', value:'tenant responsibility', next:'DONE',
+        note:"Tenant informed: pest control is tenant responsibility in single-family homes per lease.", noteType:'info' },
+      { letter:'B', text:'Submit a separate WO to patch entry points / seal gaps', value:'patch only', next:'DONE' }
+    ]
+  },
+
+  pest_entry_points: {
+    id: 'pest_entry_points',
+    text: "For multi-family properties we can coordinate pest control. Are there visible entry points (gaps, holes, cracks) that need sealing?",
+    type: 'choice', field: 'pestEntryPoints',
+    choices: [
+      { letter:'A', text:'Yes — visible gaps or holes', value:'yes',     next:'photos' },
+      { letter:'B', text:'No visible entry points',     value:'no',      next:'photos' },
+      { letter:'C', text:'Unknown',                     value:'unknown', next:'photos' }
     ]
   },
 
@@ -957,8 +1095,8 @@ const FLOW = {
     id: 'pest_action', text: "Has the tenant done anything to try to address it?",
     type: 'choice', field: 'pestTenantAction',
     choices: [
-      { letter:'A', text:'Yes — tried sprays or traps', value:'yes - tried treatment', next:'entry_permission' },
-      { letter:'B', text:'No — nothing tried yet',      value:'no',                    next:'entry_permission' }
+      { letter:'A', text:'Yes — tried sprays or traps', value:'yes - tried treatment', next:'photos' },
+      { letter:'B', text:'No — nothing tried yet',      value:'no',                    next:'photos' }
     ]
   },
 
@@ -991,10 +1129,50 @@ const FLOW = {
     type: 'choice', field: 'doorSecurity',
     choices: [
       { letter:'A', text:'Yes — tenant cannot secure their unit',
-        value:'yes - cannot secure', next:'entry_permission',
+        value:'yes - cannot secure', next:'photos',
         flag:'emergency', emergency:'SECURITY EMERGENCY — Tenant cannot lock or secure their unit. This requires a same-day locksmith or repair. Escalate immediately — do NOT use the normal dispatch queue.' },
-      { letter:'B', text:'No — they can still lock up (functional/cosmetic issue only)',
-        value:'no - can still lock', next:'entry_permission' }
+      { letter:'B', text:'No — they can still lock up',
+        value:'no - can still lock', next:'door_glass_check' }
+    ]
+  },
+
+
+  door_glass_check: {
+    id: 'door_glass_check',
+    text: "Is this a broken or cracked window/glass issue?",
+    type: 'choice', field: 'doorGlassCheck',
+    choices: [
+      { letter:'A', text:'Yes — broken or cracked glass', value:'yes', next:'door_glass_severity' },
+      { letter:'B', text:'No — not a glass issue',        value:'no',  next:'photos' }
+    ]
+  },
+
+  door_glass_severity: {
+    id: 'door_glass_severity',
+    text: "Broken glass is the tenant's responsibility (care, custody, and control). We only dispatch for glass issues that create a safety hazard, security risk, or allow air/bugs in.\n\nWhich applies?",
+    type: 'choice', field: 'doorGlassSeverity',
+    choices: [
+      { letter:'A', text:'Danger — sharp edges or glass falling out',
+        value:'danger', next:'photos',
+        note:"Dispatch for safety hazard. Tenant will be billed — broken glass is tenant responsibility.", noteType:'warn' },
+      { letter:'B', text:'Security — opening allows entry from outside',
+        value:'security', next:'photos',
+        note:"Dispatch for security concern. Tenant will be billed.", noteType:'warn' },
+      { letter:'C', text:'Air or bugs can get through the break',
+        value:'air/bugs', next:'photos',
+        note:"Dispatch to seal/repair. Tenant will be billed.", noteType:'warn' },
+      { letter:'D', text:'Small crack only — glass intact, no danger or gaps',
+        value:'small crack only', next:'door_glass_no_dispatch',
+        note:"Small crack with intact glass — do not dispatch. Tenant is responsible for broken glass.", noteType:'info' }
+    ]
+  },
+
+  door_glass_no_dispatch: {
+    id: 'door_glass_no_dispatch',
+    text: "Correct call — we do not dispatch for small cosmetic cracks where glass is intact and there is no danger, security issue, or gap.\n\nBroken glass is the tenant's responsibility. Close this work order.",
+    type: 'choice', field: 'doorGlassNoDispatch',
+    choices: [
+      { letter:'A', text:'Got it — closing this WO', value:'close', next:'DONE' }
     ]
   },
 
@@ -1042,10 +1220,10 @@ const FLOW = {
     id: 'floor_duration', text: "How long has this flooring issue been present?",
     type: 'choice', field: 'issueDuration',
     choices: [
-      { letter:'A', text:'Just noticed',              value:'just noticed',         next:'entry_permission' },
-      { letter:'B', text:'A few days to a week',      value:'a few days to a week', next:'entry_permission' },
-      { letter:'C', text:'A few weeks',               value:'a few weeks',          next:'entry_permission' },
-      { letter:'D', text:'Has been there for months', value:'months',               next:'entry_permission' }
+      { letter:'A', text:'Just noticed',              value:'just noticed',         next:'photos' },
+      { letter:'B', text:'A few days to a week',      value:'a few days to a week', next:'photos' },
+      { letter:'C', text:'A few weeks',               value:'a few weeks',          next:'photos' },
+      { letter:'D', text:'Has been there for months', value:'months',               next:'photos' }
     ]
   },
 
@@ -1077,10 +1255,10 @@ const FLOW = {
     type: 'choice', field: 'roofRecentWork',
     choices: [
       { letter:'A', text:'Yes — within the last year',
-        value:'within last year', next:'entry_permission',
+        value:'within last year', next:'photos',
         flag:'warranty', note:"⚠️ WARRANTY FLAG — Roof work within the last year. Call the original roofing contractor before dispatching anyone new.", noteType:'warn' },
-      { letter:'B', text:'Yes — 1 to 5 years ago', value:'1-5 years ago', next:'entry_permission' },
-      { letter:'C', text:'No / not aware of any',  value:'no',            next:'entry_permission' }
+      { letter:'B', text:'Yes — 1 to 5 years ago', value:'1-5 years ago', next:'photos' },
+      { letter:'C', text:'No / not aware of any',  value:'no',            next:'photos' }
     ]
   },
 
@@ -1099,31 +1277,14 @@ const FLOW = {
     text: "Is this a safety hazard (could cause injury or significant property damage if not addressed quickly)?",
     type: 'choice', field: 'otherSafety',
     choices: [
-      { letter:'A', text:'Yes — potential safety or liability hazard', value:'yes', next:'entry_permission' },
-      { letter:'B', text:'No — cosmetic or low-urgency issue',         value:'no',  next:'entry_permission' }
+      { letter:'A', text:'Yes — potential safety or liability hazard', value:'yes', next:'photos' },
+      { letter:'B', text:'No — cosmetic or low-urgency issue',         value:'no',  next:'photos' }
     ]
   },
 
   // ════════════════════════════════════════════════════════════════
   // UNIVERSAL QUESTIONS
   // ════════════════════════════════════════════════════════════════
-  entry_permission: {
-    id: 'entry_permission', text: "Can the vendor enter the unit without the tenant present?",
-    type: 'choice', field: 'entryPermission',
-    choices: [
-      { letter:'A', text:'Yes — vendor can enter without tenant home', value:'yes - can enter without tenant', next:'photos' },
-      { letter:'B', text:'No — tenant must be home for the visit',    value:'no - tenant must be home',       next:'entry_times' },
-      { letter:'C', text:'Unknown — need to check with tenant',       value:'unknown',                        next:'photos' }
-    ]
-  },
-
-  entry_times: {
-    id: 'entry_times', text: "What days and times is the tenant available?",
-    type: 'text', field: 'entryTimes',
-    placeholder: "e.g. Weekdays after 4pm, Saturday mornings, will call to schedule…",
-    next: 'photos'
-  },
-
   photos: {
     id: 'photos', text: "Do you have photos of the issue?",
     type: 'choice', field: 'photos',
@@ -1281,12 +1442,13 @@ function getDispatchStatus() {
   if (emergencyMsg)                                                return 'EMERGENCY — DO NOT USE NORMAL DISPATCH';
   if (ctx.applOwnership === 'tenant-owned')                       return 'DO NOT DISPATCH — Tenant-owned appliance';
   if (ctx.warrantyDecision === 'stop')                            return 'DO NOT DISPATCH — Warranty: call original vendor';
-  if (ctx.applHomeWarranty === 'yes')                             return 'DO NOT DISPATCH — Submit via home warranty';
   if (ctx.plumbDrainDecision === 'tenant responsibility')         return 'DO NOT DISPATCH — Tenant responsibility';
+  if (ctx.pestTenantAction === 'tenant responsibility')             return 'DO NOT DISPATCH — Pest control is tenant responsibility';
   if (ctx.hvacResolvedAction || ctx.elecResolvedAction ||
-      ctx.applDisposalResolvedAction)                             return 'NO DISPATCH — Resolved without vendor';
+      ctx.applDisposalResolvedAction || ctx.applFridgeDefrostAction ||
+      ctx.applStoveResolvedAction || ctx.hvacGasOffAction ||
+      ctx.applStoveGasOffAction)                                  return 'NO DISPATCH — Resolved without vendor';
   if (ctx.applDisposalSuggestAction)                              return 'HOLD — Awaiting tenant to try reset button';
-  if (ctx.entryPermission === 'unknown')                          return 'HOLD — Need entry confirmation from tenant';
   if (ctx.photos === 'no - will request' && photosRequired())    return 'HOLD — Awaiting photos from tenant';
   if (warrantyFlag)                                               return 'HOLD — Review warranty flag before dispatching';
   return 'READY TO DISPATCH';
@@ -1304,21 +1466,31 @@ function photosRequired() {
 
 function needsSMS() {
   if (ctx.applDisposalSuggestAction === 'send text') return true;
-  if (ctx.entryPermission === 'unknown') return true;
+  if (ctx.applFridgeDefrostAction) return true;
+  if (ctx.applStoveGasOffAction) return true;
+  if (ctx.hvacGasOffAction) return true;
+  if (ctx.pestTenantAction === 'tenant responsibility') return true;
   if (ctx.photos === 'no - will request') return true;
   return false;
 }
 
 function buildSMS() {
-  const lines = [`Hi, this is Turman Co Maintenance. We are following up on your recent work order.`];
+  const lines = [`Hi, this is Turman Co Maintenance regarding your recent work order.`];
   if (ctx.applDisposalSuggestAction === 'send text') {
     lines.push(`Before we schedule a technician for the garbage disposal, could you try this quick fix: look under the sink for the disposal unit and press the small red reset button on the bottom firmly. If that gets it working, no service visit needed! Please let us know.`);
   }
-  if (ctx.photos === 'no - will request' && photosRequired()) {
-    lines.push(`Could you please send us a photo or two of the ${getShortIssueLabel()}? This helps us send the right vendor with the right parts.`);
+
+  if (ctx.applFridgeDefrostAction) {
+    lines.push(`Regarding your refrigerator: since your freezer is working, the issue is likely ice buildup (there is only one compressor). Please do the following:\n1. Put towels on the floor in front of the fridge\n2. Move food to a cooler with ice\n3. Turn the refrigerator completely OFF for 24 hours\n4. Turn it back on and wait another 24 hours\nIf it is still not cooling after 48 hours, please submit a new work order. We have closed this current work order.`);
   }
-  if (ctx.entryPermission === 'unknown') {
-    lines.push(`Will you need to be home when our vendor visits, or can they enter using our key on file?`);
+  if (ctx.applStoveGasOffAction || ctx.hvacGasOffAction) {
+    lines.push(`It appears your gas service may be off or unpaid. This is a utility issue and is not covered under our maintenance responsibilities. Please contact your gas provider directly to restore service. Once service is restored, if the issue continues, please submit a new work order.`);
+  }
+  if (ctx.pestTenantAction === 'tenant responsibility') {
+    lines.push(`Regarding your pest control request: pest control in single-family homes is the tenant's responsibility per your lease agreement. We do not spray chemicals in occupied homes. You are welcome to hire a licensed pest control company at your expense. If you believe there are gaps or holes allowing pest entry, please submit a separate work order for that specific repair.`);
+  }
+  if (ctx.photos === 'no - will request') {
+    lines.push(`Could you please send us a few photos of the ${getShortIssueLabel()}? This helps us send the right vendor with the right parts. Please reply with photos at your earliest convenience.`);
   }
   lines.push(`Please reply at your earliest convenience. Thank you! – Turman Co Maintenance`);
   return lines.join('\n\n');
@@ -1377,7 +1549,6 @@ function buildIssueDetails() {
       if (ctx.applIssue)         lines.push(`Problem: ${ctx.applIssue}`);
       if (ctx.applDisposalReset) lines.push(`Disposal reset tried: ${ctx.applDisposalReset}`);
       if (ctx.applOwnership)     lines.push(`Ownership: ${ctx.applOwnership}`);
-      if (ctx.applHomeWarranty && ctx.applHomeWarranty !== 'no') lines.push(`Home warranty: ${ctx.applHomeWarranty}`);
       break;
     case 'pest':
       if (ctx.pestType)         lines.push(`Pest type: ${ctx.pestType}`);
@@ -1420,8 +1591,6 @@ function buildWODescription() {
   if (ctx.rmComplaint)  { lines.push(''); lines.push(`TENANT'S ORIGINAL COMPLAINT:\n${ctx.rmComplaint}`); }
   if (ctx.issueDuration) { lines.push(''); lines.push(`REPORTED DURATION: ${ctx.issueDuration}`); }
   lines.push('');
-  lines.push(`ENTRY: ${ctx.entryPermission || 'Not confirmed'}`);
-  if (ctx.entryTimes) lines.push(`AVAILABILITY: ${ctx.entryTimes}`);
   if (ctx.photos === 'yes') lines.push('PHOTOS: Available — confirm before scheduling');
   if (warrantyFlag) { lines.push(''); lines.push(`⚠️ WARRANTY FLAG — Do not dispatch until warranty has been reviewed.`); }
   if (emergencyMsg) { lines.push(''); lines.push(`🚨 EMERGENCY: ${emergencyMsg}`); }
@@ -1451,8 +1620,6 @@ function buildAptlyComment() {
   if (ctx.issueDuration) lines.push(`Duration reported: ${ctx.issueDuration}`);
   lines.push('');
   lines.push(`LOGISTICS`);
-  lines.push(`Entry: ${ctx.entryPermission || 'Not confirmed'}`);
-  if (ctx.entryTimes) lines.push(`Availability: ${ctx.entryTimes}`);
   lines.push(`Photos: ${ctx.photos || 'Not confirmed'}`);
   const advisories = [];
   if (ctx.plumbToiletReported === 'informational') advisories.push('Tenant informed of flapper fix option for running toilet');
@@ -1553,13 +1720,13 @@ function quickStart(src) {
 
 function resetTriage() {
   triageActive = false; ctx = {}; notes = []; emergencyMsg = null; warrantyFlag = false; currentQ = null;
-  const eb = document.getElementById('emergency-banner');
-  if (eb) eb.remove();
+  document.getElementById('emergency-banner').classList.remove('show');
   document.getElementById('chat').innerHTML = '';
   document.getElementById('input-wrap').classList.remove('disabled');
-  document.getElementById('input-hint').textContent = 'Type your answer or click a button above';
+  document.getElementById('input-hint').textContent = 'Click a lettered button above to answer, or type here for open-ended questions';
   document.getElementById('msg-input').value = '';
-  addAIBubble("Ready for a new work order. Select a source above and press <strong>Start Triage</strong> — or use a Quick Start button.");
+  document.querySelectorAll('.source-btn').forEach(b => b.disabled = false);
+  document.getElementById('welcome').style.display = '';
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
